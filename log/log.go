@@ -58,7 +58,7 @@ func logger(level, format string, v ...interface{}) {
 }
 
 func Debug(format string, v ...interface{}) {
-	logger(LevelInfo, format, v...)
+	logger(LevelDebug, format, v...)
 }
 
 func Info(format string, v ...interface{}) {
