@@ -1,78 +1,118 @@
 package log
 
 import (
-	"bytes"
 	"fmt"
-	"log"
 	"os"
 	"sync"
 	"time"
 )
 
+type LogLevel int
+
 const (
-	LevelDebug = "DEBUG"
-	LevelInfo  = "INFO"
-	LevelWarn  = "WARN"
-	LevelError = "ERROR"
-	LevelFatal = "FATAL"
-	ColorReset = "\033[0m"
-	ColorDebug = "\033[34m"
-	ColorInfo  = "\033[32m"
-	ColorWarn  = "\033[33m"
-	ColorError = "\033[31m"
-	ColorFatal = "\033[35m"
+	Debug LogLevel = iota
+	Info
+	Warn
+	Error
+	Fatal
 )
 
-var (
-	colors = map[string]string{
-		LevelDebug: ColorDebug,
-		LevelInfo:  ColorInfo,
-		LevelWarn:  ColorWarn,
-		LevelError: ColorError,
-		LevelFatal: ColorFatal,
+var levelStrings = map[LogLevel]string{
+	Debug: "DEBUG",
+	Info:  "INFO",
+	Warn:  "WARN",
+	Error: "ERROR",
+	Fatal: "FATAL",
+}
+
+const (
+	ansiBlue   = "\033[34m"
+	ansiGreen  = "\033[32m"
+	ansiYellow = "\033[33m"
+	ansiRed    = "\033[31m"
+	ansiPurple = "\033[35m"
+	resetColor = "\033[0m"
+)
+
+var levelColors = map[LogLevel]string{
+	Debug: ansiBlue,
+	Info:  ansiGreen,
+	Warn:  ansiYellow,
+	Error: ansiRed,
+	Fatal: ansiPurple,
+}
+
+type Logger struct {
+	mu          sync.Mutex
+	minLogLevel LogLevel
+	enableColor bool
+}
+
+func NewLogger(logLevel LogLevel, enableColor bool) *Logger {
+	if logLevel < Debug || logLevel > Fatal {
+		logLevel = Info
 	}
-	mu sync.Mutex
-)
-
-type Adapter struct{}
-
-func (a *Adapter) Write(p []byte) (n int, err error) {
-	Warn("%v", string(bytes.TrimSpace(p)))
-	return len(p), nil
+	return &Logger{
+		minLogLevel: logLevel,
+		enableColor: enableColor,
+	}
 }
 
-func NewLogger() *log.Logger {
-	return log.New(&Adapter{}, "", 0)
+func (l *Logger) SetLogLevel(logLevel LogLevel) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.minLogLevel = logLevel
 }
 
-func logger(level, format string, v ...interface{}) {
-	mu.Lock()
-	defer mu.Unlock()
-	timestamp := time.Now().Format("2006-01-02 15:04:05.000")
-	color := colors[level]
+func (l *Logger) EnableColor(enable bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.enableColor = enable
+}
+
+func (l *Logger) log(logLevel LogLevel, format string, v ...interface{}) {
+	if logLevel < Debug || logLevel > Fatal {
+		logLevel = Info
+	}
+	if logLevel < l.minLogLevel {
+		return
+	}
+	timestamp := time.Now().Format("2006-01-02 15:04:05")
+	levelStr := levelStrings[logLevel]
 	message := fmt.Sprintf(format, v...)
-	fmt.Printf("%v  %v%v%v  %v\n", timestamp, color, level, ColorReset, message)
-	if level == LevelFatal {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.writeLog(logLevel, timestamp, levelStr, message)
+	if logLevel == Fatal {
 		os.Exit(1)
 	}
 }
 
-func Debug(format string, v ...interface{}) {
-	logger(LevelDebug, format, v...)
+func (l *Logger) writeLog(level LogLevel, timestamp, levelStr, message string) {
+	if l.enableColor {
+		colorCode := levelColors[level]
+		fmt.Printf("%s  %s%s%s  %s\n", timestamp, colorCode, levelStr, resetColor, message)
+	} else {
+		fmt.Printf("%s  %s  %s\n", timestamp, levelStr, message)
+	}
 }
 
-func Info(format string, v ...interface{}) {
-	logger(LevelInfo, format, v...)
+func (l *Logger) Debug(format string, v ...interface{}) {
+	l.log(Debug, format, v...)
 }
 
-func Warn(format string, v ...interface{}) {
-	logger(LevelWarn, format, v...)
+func (l *Logger) Info(format string, v ...interface{}) {
+	l.log(Info, format, v...)
 }
 
-func Error(format string, v ...interface{}) {
-	logger(LevelError, format, v...)
+func (l *Logger) Warn(format string, v ...interface{}) {
+	l.log(Warn, format, v...)
 }
 
-func Fatal(format string, v ...interface{}) {
-	logger(LevelFatal, format, v...)
+func (l *Logger) Error(format string, v ...interface{}) {
+	l.log(Error, format, v...)
+}
+
+func (l *Logger) Fatal(format string, v ...interface{}) {
+	l.log(Fatal, format, v...)
 }
