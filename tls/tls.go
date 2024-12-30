@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func NewTLSconfig(hostname string) (*tls.Config, error) {
+func NewTLSconfig(name string) (*tls.Config, error) {
 	private, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, err
@@ -23,7 +23,7 @@ func NewTLSconfig(hostname string) (*tls.Config, error) {
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			Organization: []string{hostname},
+			Organization: []string{name},
 		},
 		NotBefore:   time.Now(),
 		NotAfter:    time.Now().Add(365 * 24 * time.Hour),
