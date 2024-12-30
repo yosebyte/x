@@ -1,7 +1,9 @@
 package log
 
 import (
+	"bytes"
 	"fmt"
+	"log"
 	"os"
 	"sync"
 	"time"
@@ -48,26 +50,42 @@ type Logger struct {
 	enableColor bool
 }
 
+type logAdapter struct {
+	logger *Logger
+}
+
+func (l *Logger) StdLogger() *log.Logger {
+	return log.New(&logAdapter{logger: l}, "", 0)
+}
+
+func (a *logAdapter) Write(p []byte) (n int, err error) {
+	a.logger.Warn("Internal: %s", string(bytes.TrimSpace(p)))
+	return len(p), nil
+}
+
 func NewLogger(logLevel LogLevel, enableColor bool) *Logger {
 	if logLevel < Debug || logLevel > Fatal {
 		logLevel = Info
 	}
 	return &Logger{
+		mu:          sync.Mutex{},
 		minLogLevel: logLevel,
 		enableColor: enableColor,
 	}
 }
-
 func (l *Logger) SetLogLevel(logLevel LogLevel) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	l.minLogLevel = logLevel
+	if l.minLogLevel != logLevel {
+		l.mu.Lock()
+		defer l.mu.Unlock()
+		l.minLogLevel = logLevel
+	}
 }
-
 func (l *Logger) EnableColor(enable bool) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	l.enableColor = enable
+	if l.enableColor != enable {
+		l.mu.Lock()
+		defer l.mu.Unlock()
+		l.enableColor = enable
+	}
 }
 
 func (l *Logger) log(logLevel LogLevel, format string, v ...interface{}) {
@@ -80,9 +98,11 @@ func (l *Logger) log(logLevel LogLevel, format string, v ...interface{}) {
 	timestamp := time.Now().Format("2006-01-02 15:04:05")
 	levelStr := levelStrings[logLevel]
 	message := fmt.Sprintf(format, v...)
+
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.writeLog(logLevel, timestamp, levelStr, message)
+
 	if logLevel == Fatal {
 		os.Exit(1)
 	}
