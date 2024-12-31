@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"log"
-	"os"
 	"sync"
 	"time"
 )
@@ -73,6 +72,7 @@ func NewLogger(logLevel LogLevel, enableColor bool) *Logger {
 		enableColor: enableColor,
 	}
 }
+
 func (l *Logger) SetLogLevel(logLevel LogLevel) {
 	if l.minLogLevel != logLevel {
 		l.mu.Lock()
@@ -80,6 +80,13 @@ func (l *Logger) SetLogLevel(logLevel LogLevel) {
 		l.minLogLevel = logLevel
 	}
 }
+
+func (l *Logger) GetLogLevel() LogLevel {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.minLogLevel
+}
+
 func (l *Logger) EnableColor(enable bool) {
 	if l.enableColor != enable {
 		l.mu.Lock()
@@ -98,14 +105,9 @@ func (l *Logger) log(logLevel LogLevel, format string, v ...interface{}) {
 	timestamp := time.Now().Format("2006-01-02 15:04:05")
 	levelStr := levelStrings[logLevel]
 	message := fmt.Sprintf(format, v...)
-
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.writeLog(logLevel, timestamp, levelStr, message)
-
-	if logLevel == Fatal {
-		os.Exit(1)
-	}
 }
 
 func (l *Logger) writeLog(level LogLevel, timestamp, levelStr, message string) {
