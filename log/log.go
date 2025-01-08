@@ -59,7 +59,7 @@ func (l *Logger) StdLogger() *log.Logger {
 }
 
 func (a *logAdapter) Write(p []byte) (n int, err error) {
-	a.logger.Warn("Internal: %s", string(bytes.TrimSpace(p)))
+	a.logger.Debug("Internal: %s", string(bytes.TrimSpace(p)))
 	return len(p), nil
 }
 
