@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func generateTLSConfig(name string) (*tls.Config, error) {
+func GenerateTLSConfig(name string) (*tls.Config, error) {
 	private, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, err
