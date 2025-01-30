@@ -11,46 +11,32 @@ func DataExchange(conn1, conn2 net.Conn) error {
 		once1, once2 sync.Once
 		wg           sync.WaitGroup
 	)
-	closeConn1 := func() {
-		once1.Do(func() {
-			if conn1 != nil {
-				conn1.Close()
-			}
-		})
-	}
-	closeConn2 := func() {
-		once2.Do(func() {
-			if conn2 != nil {
-				conn2.Close()
+	closeConn := func(conn net.Conn, once *sync.Once) {
+		once.Do(func() {
+			if conn != nil {
+				conn.Close()
 			}
 		})
 	}
 	errChan := make(chan error, 2)
 	wg.Add(2)
-	go func() {
+	exchange := func(dst, src net.Conn, closeDst, closeSrc *sync.Once) {
 		defer func() {
-			closeConn1()
-			closeConn2()
+			closeConn(dst, closeDst)
+			closeConn(src, closeSrc)
 			wg.Done()
 		}()
-		if _, err := io.Copy(conn1, conn2); err != nil {
-			errChan <- err
-		}
-	}()
-	go func() {
-		defer func() {
-			closeConn2()
-			closeConn1()
-			wg.Done()
-		}()
-		if _, err := io.Copy(conn2, conn1); err != nil {
-			errChan <- err
-		}
-	}()
-	wg.Wait()
-	if err := <-errChan; err == nil {
-		return io.EOF
-	} else {
-		return err
+		_, err := io.Copy(dst, src)
+		errChan <- err
 	}
+	go exchange(conn1, conn2, &once1, &once2)
+	go exchange(conn2, conn1, &once2, &once1)
+	wg.Wait()
+	close(errChan)
+	for err := range errChan {
+		if err != nil {
+			return err
+		}
+	}
+	return io.EOF
 }
