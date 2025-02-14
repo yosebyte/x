@@ -1,3 +1,3 @@
 # X
 
-Shared Go Libraries.
+Shared Resources.
