@@ -1,44 +1,57 @@
-package io
+package main
 
 import (
+	"context"
 	"io"
 	"net"
 	"sync"
 	"sync/atomic"
-	"time"
 )
+
+type exchangeData struct {
+	conn1   net.Conn
+	conn2   net.Conn
+	sum     int64
+	errChan chan error
+}
 
 func DataExchange(conn1, conn2 net.Conn) (int64, error) {
 	if conn1 == nil || conn2 == nil {
 		return 0, io.ErrUnexpectedEOF
 	}
-	var (
-		sum  int64
-		wg   sync.WaitGroup
-		once sync.Once
-	)
-	errChan := make(chan error, 2)
-	stopCopy := func() {
-		once.Do(func() {
-			conn1.SetReadDeadline(time.Now())
-			conn2.SetReadDeadline(time.Now())
-		})
+	data := &exchangeData{
+		conn1:   conn1,
+		conn2:   conn2,
+		errChan: make(chan error, 2),
 	}
-	exchange := func(dst, src net.Conn) {
-		defer wg.Done()
-		n, err := io.Copy(dst, src)
-		atomic.AddInt64(&sum, n)
-		if err != nil {
-			stopCopy()
-		}
-		errChan <- err
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var wg sync.WaitGroup
 	wg.Add(2)
-	go exchange(conn1, conn2)
-	go exchange(conn2, conn1)
+	go exchange(ctx, &wg, data, true)
+	go exchange(ctx, &wg, data, false)
 	wg.Wait()
-	close(errChan)
-	conn1.SetReadDeadline(time.Time{})
-	conn2.SetReadDeadline(time.Time{})
-	return sum, <-errChan
+	close(data.errChan)
+	select {
+	case err := <-data.errChan:
+		return data.sum, err
+	default:
+		return data.sum, io.EOF
+	}
+}
+
+func exchange(ctx context.Context, wg *sync.WaitGroup, data *exchangeData, coin bool) {
+	defer wg.Done()
+	var src, dst net.Conn
+	if coin {
+		src, dst = data.conn1, data.conn2
+	} else {
+		src, dst = data.conn2, data.conn1
+	}
+	n, err := io.Copy(dst, src)
+	atomic.AddInt64(&data.sum, n)
+	if err != nil {
+		data.errChan <- err
+		cancel()
+	}
 }
