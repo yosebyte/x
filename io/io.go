@@ -4,39 +4,41 @@ import (
 	"io"
 	"net"
 	"sync"
+	"sync/atomic"
+	"time"
 )
 
-func DataExchange(conn1, conn2 net.Conn) error {
+func DataExchange(conn1, conn2 net.Conn) (int64, error) {
+	if conn1 == nil || conn2 == nil {
+		return 0, io.ErrUnexpectedEOF
+	}
 	var (
-		once1, once2 sync.Once
-		wg           sync.WaitGroup
+		sum  int64
+		wg   sync.WaitGroup
+		once sync.Once
 	)
-	closeConn := func(conn net.Conn, once *sync.Once) {
+	errChan := make(chan error, 2)
+	stopCopy := func() {
 		once.Do(func() {
-			if conn != nil {
-				conn.Close()
-			}
+			conn1.SetReadDeadline(time.Now())
+			conn2.SetReadDeadline(time.Now())
 		})
 	}
-	errChan := make(chan error, 2)
-	wg.Add(2)
-	exchange := func(dst, src net.Conn, closeDst, closeSrc *sync.Once) {
-		defer func() {
-			closeConn(dst, closeDst)
-			closeConn(src, closeSrc)
-			wg.Done()
-		}()
-		_, err := io.Copy(dst, src)
+	exchange := func(dst, src net.Conn) {
+		defer wg.Done()
+		n, err := io.Copy(dst, src)
+		atomic.AddInt64(&sum, n)
+		if err != nil {
+			stopCopy()
+		}
 		errChan <- err
 	}
-	go exchange(conn1, conn2, &once1, &once2)
-	go exchange(conn2, conn1, &once2, &once1)
+	wg.Add(2)
+	go exchange(conn1, conn2)
+	go exchange(conn2, conn1)
 	wg.Wait()
 	close(errChan)
-	for err := range errChan {
-		if err != nil {
-			return err
-		}
-	}
-	return io.EOF
+	conn1.SetReadDeadline(time.Time{})
+	conn2.SetReadDeadline(time.Time{})
+	return sum, <-errChan
 }
