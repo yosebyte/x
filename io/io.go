@@ -5,7 +5,6 @@ import (
 	"io"
 	"net"
 	"sync"
-	"sync/atomic"
 )
 
 func DataExchange(conn1, conn2 net.Conn) (int64, int64, error) {
@@ -31,7 +30,7 @@ func DataExchange(conn1, conn2 net.Conn) (int64, int64, error) {
 			pr.CloseWithError(context.Canceled)
 		}()
 		n, err := io.Copy(dst, pr)
-		atomic.AddInt64(sum, n)
+		*sum = n
 		if err != nil {
 			errChan <- err
 			cancel()
@@ -47,6 +46,5 @@ func DataExchange(conn1, conn2 net.Conn) (int64, int64, error) {
 			return sum1, sum2, err
 		}
 	}
-	cancel()
 	return sum1, sum2, io.EOF
 }
