@@ -1,4 +1,4 @@
-package io
+package internal
 
 import (
 	"context"
@@ -14,10 +14,10 @@ func DataExchange(conn1, conn2 net.Conn) (int64, int64, error) {
 	var (
 		sum1, sum2 int64
 		wg         sync.WaitGroup
+		errChan    = make(chan error, 2)
 	)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	errChan := make(chan error, 2)
 	copyData := func(dst, src net.Conn, sum *int64) {
 		defer wg.Done()
 		pr, pw := io.Pipe()
@@ -31,10 +31,8 @@ func DataExchange(conn1, conn2 net.Conn) (int64, int64, error) {
 		}()
 		n, err := io.Copy(dst, pr)
 		*sum = n
-		if err != nil {
-			errChan <- err
-			cancel()
-		}
+		errChan <- err
+		cancel()
 	}
 	wg.Add(2)
 	go copyData(conn1, conn2, &sum1)
