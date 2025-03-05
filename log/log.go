@@ -97,7 +97,7 @@ func (l *Logger) EnableColor(enable bool) {
 	}
 }
 
-func (l *Logger) log(logLevel LogLevel, format string, v ...interface{}) {
+func (l *Logger) log(logLevel LogLevel, format string, v ...any) {
 	if logLevel < Debug || logLevel > Fatal {
 		logLevel = Info
 	}
@@ -121,22 +121,22 @@ func (l *Logger) writeLog(level LogLevel, timestamp, levelStr, message string) {
 	}
 }
 
-func (l *Logger) Debug(format string, v ...interface{}) {
+func (l *Logger) Debug(format string, v ...any) {
 	l.log(Debug, format, v...)
 }
 
-func (l *Logger) Info(format string, v ...interface{}) {
+func (l *Logger) Info(format string, v ...any) {
 	l.log(Info, format, v...)
 }
 
-func (l *Logger) Warn(format string, v ...interface{}) {
+func (l *Logger) Warn(format string, v ...any) {
 	l.log(Warn, format, v...)
 }
 
-func (l *Logger) Error(format string, v ...interface{}) {
+func (l *Logger) Error(format string, v ...any) {
 	l.log(Error, format, v...)
 }
 
-func (l *Logger) Fatal(format string, v ...interface{}) {
+func (l *Logger) Fatal(format string, v ...any) {
 	l.log(Fatal, format, v...)
 }
