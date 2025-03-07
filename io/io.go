@@ -21,11 +21,10 @@ func DataExchange(conn1, conn2 net.Conn) (int64, int64, error) {
 		*sum = n
 		errChan <- err
 		if err == nil || err == io.EOF {
-			if tcpConn, ok := dst.(*net.TCPConn); ok {
-				tcpConn.CloseWrite()
+			if c, ok := dst.(interface{ CloseWrite() error }); ok {
+				c.CloseWrite()
 			}
 		} else {
-			dst.Close()
 			src.Close()
 		}
 	}
