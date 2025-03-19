@@ -10,6 +10,7 @@ import (
 )
 
 type Pool struct {
+	mu       sync.Mutex
 	conns    *sync.Map
 	idChan   chan string
 	dialer   func() (net.Conn, error)
@@ -213,17 +214,19 @@ func (p *Pool) adjustInterval() {
 	idle := len(p.idChan)
 	if idle < p.capacity*2/10 && p.interval > p.minIvl {
 		p.interval -= time.Second
-	} else if idle > p.capacity*8/10 && p.interval < p.maxIvl {
+	}
+	if idle > p.capacity*8/10 && p.interval < p.maxIvl {
 		p.interval += time.Second
 	}
 }
 
 func (p *Pool) adjustCapacity(created int) {
 	ratio := float64(created) / float64(p.capacity)
+	if ratio < 0.2 && p.capacity > p.minCap {
+		p.capacity--
+	}
 	if ratio > 0.8 && p.capacity < p.maxCap {
 		p.capacity++
-	} else if ratio < 0.2 && p.capacity > p.minCap {
-		p.capacity--
 	}
 }
 
@@ -243,19 +246,23 @@ func (p *Pool) isActive(conn net.Conn) bool {
 
 func (p *Pool) Get() (string, net.Conn) {
 	for {
+		p.mu.Lock()
 		select {
 		case id := <-p.idChan:
 			if conn, ok := p.conns.Load(id); ok {
 				netConn := conn.(net.Conn)
 				if p.isActive(netConn) {
+					p.mu.Unlock()
 					return id, netConn
 				}
 				netConn.Close()
 				p.conns.Delete(id)
 			}
 		case <-p.ctx.Done():
+			p.mu.Unlock()
 			return "", nil
 		}
+		p.mu.Unlock()
 	}
 }
 
