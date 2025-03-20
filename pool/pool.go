@@ -11,7 +11,7 @@ import (
 
 type Pool struct {
 	mu       sync.Mutex
-	conns    *sync.Map
+	conns    sync.Map
 	idChan   chan string
 	dialer   func() (net.Conn, error)
 	listener net.Listener
@@ -23,27 +23,6 @@ type Pool struct {
 	maxIvl   time.Duration
 	ctx      context.Context
 	cancel   context.CancelFunc
-}
-
-func NewClientPool(minCap, maxCap int, dialer func() (net.Conn, error)) *Pool {
-	if minCap <= 0 {
-		minCap = 1
-	}
-	if maxCap <= 0 {
-		maxCap = 1
-	}
-	if minCap > maxCap {
-		minCap, maxCap = maxCap, minCap
-	}
-	return &Pool{
-		conns:    &sync.Map{},
-		idChan:   make(chan string, maxCap),
-		dialer:   dialer,
-		capacity: minCap,
-		minCap:   minCap,
-		maxCap:   maxCap,
-		interval: time.Second,
-	}
 }
 
 func NewBrokerPool(minCap, maxCap int, minIvl, maxIvl time.Duration, dialer func() (net.Conn, error)) *Pool {
@@ -66,7 +45,7 @@ func NewBrokerPool(minCap, maxCap int, minIvl, maxIvl time.Duration, dialer func
 		minIvl, maxIvl = maxIvl, minIvl
 	}
 	return &Pool{
-		conns:    &sync.Map{},
+		conns:    sync.Map{},
 		idChan:   make(chan string, maxCap),
 		dialer:   dialer,
 		capacity: minCap,
@@ -78,6 +57,27 @@ func NewBrokerPool(minCap, maxCap int, minIvl, maxIvl time.Duration, dialer func
 	}
 }
 
+func NewClientPool(minCap, maxCap int, dialer func() (net.Conn, error)) *Pool {
+	if minCap <= 0 {
+		minCap = 1
+	}
+	if maxCap <= 0 {
+		maxCap = 1
+	}
+	if minCap > maxCap {
+		minCap, maxCap = maxCap, minCap
+	}
+	return &Pool{
+		conns:    sync.Map{},
+		idChan:   make(chan string, maxCap),
+		dialer:   dialer,
+		capacity: minCap,
+		minCap:   minCap,
+		maxCap:   maxCap,
+		interval: time.Second,
+	}
+}
+
 func NewServerPool(maxCap int, listener net.Listener) *Pool {
 	if maxCap <= 0 {
 		maxCap = 1
@@ -86,9 +86,47 @@ func NewServerPool(maxCap int, listener net.Listener) *Pool {
 		return nil
 	}
 	return &Pool{
-		conns:    &sync.Map{},
+		conns:    sync.Map{},
 		idChan:   make(chan string, maxCap),
 		listener: listener,
+	}
+}
+
+func (p *Pool) BrokerManager() {
+	if p.cancel != nil {
+		p.cancel()
+	}
+	p.ctx, p.cancel = context.WithCancel(context.Background())
+	var mu sync.Mutex
+	for {
+		interval := p.interval
+		select {
+		case <-p.ctx.Done():
+			return
+		default:
+			if !mu.TryLock() {
+				continue
+			}
+			p.adjustInterval()
+			created := 0
+			for len(p.idChan) < p.capacity {
+				conn, err := p.dialer()
+				if err != nil {
+					continue
+				}
+				id := p.getID()
+				select {
+				case p.idChan <- id:
+					p.conns.Store(id, conn)
+					created++
+				default:
+					conn.Close()
+				}
+			}
+			p.adjustCapacity(created)
+			mu.Unlock()
+			time.Sleep(interval)
+		}
 	}
 }
 
@@ -99,9 +137,10 @@ func (p *Pool) ClientManager() {
 	p.ctx, p.cancel = context.WithCancel(context.Background())
 	var mu sync.Mutex
 	for {
-		timer := time.NewTimer(p.interval)
 		select {
-		case <-timer.C:
+		case <-p.ctx.Done():
+			return
+		default:
 			if !mu.TryLock() {
 				continue
 			}
@@ -109,7 +148,7 @@ func (p *Pool) ClientManager() {
 			for len(p.idChan) < p.capacity {
 				conn, err := p.dialer()
 				if err != nil {
-					break
+					continue
 				}
 				buf := make([]byte, 8)
 				n, err := conn.Read(buf)
@@ -128,48 +167,7 @@ func (p *Pool) ClientManager() {
 			}
 			p.adjustCapacity(created)
 			mu.Unlock()
-		case <-p.ctx.Done():
-			timer.Stop()
-			return
-		}
-	}
-}
-
-func (p *Pool) BrokerManager() {
-	if p.cancel != nil {
-		p.cancel()
-	}
-	p.ctx, p.cancel = context.WithCancel(context.Background())
-	var mu sync.Mutex
-	for {
-		interval := p.interval
-		timer := time.NewTimer(interval)
-		select {
-		case <-timer.C:
-			if !mu.TryLock() {
-				continue
-			}
-			p.adjustInterval()
-			created := 0
-			for len(p.idChan) < p.capacity {
-				conn, err := p.dialer()
-				if err != nil {
-					break
-				}
-				id := p.getID()
-				select {
-				case p.idChan <- id:
-					p.conns.Store(id, conn)
-					created++
-				default:
-					conn.Close()
-				}
-			}
-			p.adjustCapacity(created)
-			mu.Unlock()
-		case <-p.ctx.Done():
-			timer.Stop()
-			return
+			time.Sleep(p.interval)
 		}
 	}
 }
@@ -204,10 +202,116 @@ func (p *Pool) ServerManager() {
 	}
 }
 
+func (p *Pool) BrokerGet() (string, net.Conn) {
+	for {
+		select {
+		case id := <-p.idChan:
+			if conn, ok := p.conns.LoadAndDelete(id); ok {
+				netConn := conn.(net.Conn)
+				if p.isActive(netConn) {
+					return id, netConn
+				}
+				netConn.Close()
+			}
+		case <-p.ctx.Done():
+			return "", nil
+		default:
+			conn, err := p.dialer()
+			if err != nil {
+				return err.Error(), nil
+			}
+			return p.getID(), conn
+		}
+	}
+}
+
+func (p *Pool) ClientGet(id string) net.Conn {
+	for {
+		select {
+		case <-p.ctx.Done():
+			return nil
+		default:
+			p.mu.Lock()
+			defer p.mu.Unlock()
+			if conn, ok := p.conns.LoadAndDelete(id); ok {
+				p.removeID(id)
+				return conn.(net.Conn)
+			}
+			return nil
+		}
+	}
+}
+
+func (p *Pool) ServerGet() (string, net.Conn) {
+	for {
+		select {
+		case id := <-p.idChan:
+			if conn, ok := p.conns.LoadAndDelete(id); ok {
+				netConn := conn.(net.Conn)
+				if p.isActive(netConn) {
+					return id, netConn
+				}
+				netConn.Close()
+			}
+		case <-p.ctx.Done():
+			return p.ctx.Err().Error(), nil
+		}
+	}
+}
+
+func (p *Pool) Close() {
+	if p.cancel != nil {
+		p.cancel()
+	}
+	var wg sync.WaitGroup
+	p.conns.Range(func(key, value any) bool {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			value.(net.Conn).Close()
+		}()
+		return true
+	})
+	wg.Wait()
+}
+
+func (p *Pool) Active() int {
+	return len(p.idChan)
+}
+
+func (p *Pool) Capacity() int {
+	return p.capacity
+}
+
+func (p *Pool) Interval() time.Duration {
+	return p.interval
+}
+
 func (p *Pool) getID() string {
 	bytes := make([]byte, 4)
 	rand.Read(bytes)
 	return hex.EncodeToString(bytes)
+}
+
+func (p *Pool) removeID(id string) {
+	var wg sync.WaitGroup
+	tmpChan := make(chan string, p.maxCap)
+	for {
+		select {
+		case tmp := <-p.idChan:
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				if tmp != id {
+					tmpChan <- tmp
+				}
+			}()
+		default:
+			wg.Wait()
+			p.idChan = tmpChan
+			return
+		}
+	}
 }
 
 func (p *Pool) adjustInterval() {
@@ -242,78 +346,4 @@ func (p *Pool) isActive(conn net.Conn) bool {
 		return true
 	}
 	return false
-}
-
-func (p *Pool) Get() (string, net.Conn) {
-	for {
-		p.mu.Lock()
-		select {
-		case id := <-p.idChan:
-			if conn, ok := p.conns.Load(id); ok {
-				netConn := conn.(net.Conn)
-				if p.isActive(netConn) {
-					p.mu.Unlock()
-					return id, netConn
-				}
-				netConn.Close()
-				p.conns.Delete(id)
-			}
-		case <-p.ctx.Done():
-			p.mu.Unlock()
-			return "", nil
-		}
-		p.mu.Unlock()
-	}
-}
-
-func (p *Pool) GetMore() (string, net.Conn) {
-	for {
-		select {
-		case id := <-p.idChan:
-			if conn, ok := p.conns.Load(id); ok {
-				netConn := conn.(net.Conn)
-				if p.isActive(netConn) {
-					return id, netConn
-				}
-				netConn.Close()
-				p.conns.Delete(id)
-			}
-		case <-p.ctx.Done():
-			return "", nil
-		default:
-			conn, err := p.dialer()
-			if err != nil {
-				return "", nil
-			}
-			return p.getID(), conn
-		}
-	}
-}
-
-func (p *Pool) Close() {
-	if p.cancel != nil {
-		p.cancel()
-	}
-	var wg sync.WaitGroup
-	p.conns.Range(func(key, value any) bool {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			value.(net.Conn).Close()
-		}()
-		return true
-	})
-	wg.Wait()
-}
-
-func (p *Pool) Active() int {
-	return len(p.idChan)
-}
-
-func (p *Pool) Capacity() int {
-	return p.capacity
-}
-
-func (p *Pool) Interval() time.Duration {
-	return p.interval
 }
