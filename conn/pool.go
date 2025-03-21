@@ -1,4 +1,4 @@
-package pool
+package conn
 
 import (
 	"context"
@@ -226,20 +226,13 @@ func (p *Pool) BrokerGet() (string, net.Conn) {
 }
 
 func (p *Pool) ClientGet(id string) net.Conn {
-	for {
-		select {
-		case <-p.ctx.Done():
-			return nil
-		default:
-			p.mu.Lock()
-			defer p.mu.Unlock()
-			if conn, ok := p.conns.LoadAndDelete(id); ok {
-				p.removeID(id)
-				return conn.(net.Conn)
-			}
-			return nil
-		}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if conn, ok := p.conns.LoadAndDelete(id); ok {
+		p.removeID(id)
+		return conn.(net.Conn)
 	}
+	return nil
 }
 
 func (p *Pool) ServerGet() (string, net.Conn) {
