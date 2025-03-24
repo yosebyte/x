@@ -202,8 +202,8 @@ for {
 #### Key Certificate Details
 
 The generated certificate:
-- Uses a 2048-bit RSA key
-- Is valid for 365 days from creation
+- Uses ECDSA keys with P256 curve
+- Is valid 1 year from creation
 - Includes the provided organization name
 - Has appropriate key usages for server authentication
 
