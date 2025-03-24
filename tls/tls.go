@@ -1,8 +1,9 @@
 package tls
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -12,7 +13,7 @@ import (
 )
 
 func GenerateTLSConfig(name string) (*tls.Config, error) {
-	private, err := rsa.GenerateKey(rand.Reader, 2048)
+	private, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, err
 	}
@@ -26,20 +27,23 @@ func GenerateTLSConfig(name string) (*tls.Config, error) {
 			Organization: []string{name},
 		},
 		NotBefore:   time.Now(),
-		NotAfter:    time.Now().Add(365 * 24 * time.Hour),
+		NotAfter:    time.Now().AddDate(1, 0, 0),
 		KeyUsage:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 	}
-	crtDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &private.PublicKey, private)
+	crtBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &private.PublicKey, private)
 	if err != nil {
 		return nil, err
 	}
-	crtPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: crtDER})
-	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(private)})
+	keyBytes, err := x509.MarshalPKCS8PrivateKey(private)
+	if err != nil {
+		return nil, err
+	}
+	crtPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: crtBytes})
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: keyBytes})
 	cert, err := tls.X509KeyPair(crtPEM, keyPEM)
 	if err != nil {
 		return nil, err
 	}
-	tlsConfig := &tls.Config{Certificates: []tls.Certificate{cert}}
-	return tlsConfig, nil
+	return &tls.Config{Certificates: []tls.Certificate{cert}}, nil
 }
