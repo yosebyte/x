@@ -214,7 +214,7 @@ func (p *Pool) BrokerGet() (string, net.Conn) {
 				netConn.Close()
 			}
 		case <-p.ctx.Done():
-			return "", nil
+			return p.ctx.Err().Error(), nil
 		default:
 			conn, err := p.dialer()
 			if err != nil {
@@ -266,6 +266,10 @@ func (p *Pool) Close() {
 		return true
 	})
 	wg.Wait()
+}
+
+func (p *Pool) Ready() bool {
+	return p.ctx != nil
 }
 
 func (p *Pool) Active() int {
