@@ -11,28 +11,27 @@ NC='\033[0m' # No Color
 
 # Base variables
 NODEPASS_PATH="/usr/local/bin/nodepass"
-SERVICE_PATH="/etc/systemd/system/nodepass.service"
-CONFIG_PATH="/etc/nodepass/config"
+SERVICE_DIR="/etc/systemd/system"
+CONFIG_DIR="/etc/nodepass"
+CONFIG_FILE="${CONFIG_DIR}/config.json"
 
 # Required dependencies
-DEPENDENCIES=("curl" "tar" "grep" "sed")
+DEPENDENCIES=("curl" "tar" "grep" "sed" "jq")
 
 # Display the logo
 show_logo() {
     clear
     echo -e "${BLUE}"
     cat << "EOF"
- ███╗   ██╗ ██████╗ ██████╗ ███████╗██████╗  █████╗ ███████╗███████╗
- ████╗  ██║██╔═══██╗██╔══██╗██╔════╝██╔══██╗██╔══██╗██╔════╝██╔════╝
- ██╔██╗ ██║██║   ██║██║  ██║█████╗  ██████╔╝███████║███████╗███████╗
- ██║╚██╗██║██║   ██║██║  ██║██╔══╝  ██╔═══╝ ██╔══██║╚════██║╚════██║
- ██║ ╚████║╚██████╔╝██████╔╝███████╗██║     ██║  ██║███████║███████║
- ╚═╝  ╚═══╝ ╚═════╝ ╚═════╝ ╚══════╝╚═╝     ╚═╝  ╚═╝╚══════╝╚══════╝
+.---------------------------------.
+|░█▀█░█▀█░█▀▄░█▀▀░█▀█░█▀█░█▀▀░█▀▀░|
+|░█░█░█░█░█░█░█▀▀░█▀▀░█▀█░▀▀█░▀▀█░|
+|░▀░▀░▀▀▀░▀▀░░▀▀▀░▀░░░▀░▀░▀▀▀░▀▀▀░|
+'---------------------------------'
 EOF
     echo -e "${NC}"
-    echo -e "${CYAN}Efficient TCP/UDP Tunneling Solution${NC}"
-    echo -e "${YELLOW}Version: $(get_version_info) | Author: Yosebyte${NC}"
     echo -e "${GREEN}https://github.com/yosebyte/nodepass${NC}"
+    echo -e "${YELLOW}Version: $(get_version_info)${NC}"
     echo
 }
 
@@ -106,9 +105,13 @@ install_dependencies() {
 # Get version info (for logo display)
 get_version_info() {
     if [ -f "$NODEPASS_PATH" ]; then
-        if [ -f "$CONFIG_PATH" ]; then
-            source $CONFIG_PATH
-            echo "$VERSION"
+        if [ -f "$CONFIG_FILE" ]; then
+            VERSION=$(jq -r '.global.version' "$CONFIG_FILE" 2>/dev/null)
+            if [[ "$VERSION" == "null" || -z "$VERSION" ]]; then
+                echo "Unknown"
+            else
+                echo "$VERSION"
+            fi
         else
             echo "Unknown"
         fi
@@ -146,7 +149,7 @@ load_messages() {
         MSG_ARCH_UNSUPPORTED="不支持的系统架构！NodePass 仅支持 amd64 和 arm64 架构。"
         MSG_CHECKING_VERSION="获取最新版本..."
         MSG_VERSION_DETECTED="检测到最新版本："
-        MSG_VERSION_ERROR="无法获取最新版本，请检查网络连接。"
+        MSG_VERSION_ERROR="无法获取最新版本，请手动输入版本号（例如: v1.0.2）："
         MSG_MIRROR="是否使用 GitHub 镜像？(中国大陆用户推荐使用)"
         MSG_MIRROR_YES="是，使用镜像"
         MSG_MIRROR_NO="否，使用 GitHub 原站"
@@ -192,11 +195,8 @@ load_messages() {
         MSG_NOT_INSTALLED="NodePass 未安装，请先安装。"
         MSG_MAIN_MENU="NodePass 管理菜单"
         MSG_MENU_INSTALL="安装 NodePass"
-        MSG_MENU_START="启动 NodePass 服务"
-        MSG_MENU_STOP="停止 NodePass 服务"
-        MSG_MENU_RESTART="重启 NodePass 服务"
+        MSG_MENU_MANAGE="管理 NodePass 服务"
         MSG_MENU_UPDATE="更新 NodePass"
-        MSG_MENU_UNINSTALL="卸载 NodePass"
         MSG_MENU_EXIT="退出脚本"
         MSG_MENU_CHOICE="请选择操作："
         MSG_PRESS_ENTER="按回车键继续..."
@@ -210,6 +210,25 @@ load_messages() {
         MSG_INSTALLING_DEPENDENCIES="正在安装依赖项..."
         MSG_DEPENDENCIES_INSTALLED="依赖项安装成功！"
         MSG_PACKAGE_MANAGER_NOT_FOUND="无法确定包管理器，请手动安装依赖项。"
+        MSG_SERVICE_NAME="请为此服务设置一个名称（不含空格，例如：web、proxy）："
+        MSG_SERVICE_EXISTS="服务名称已存在，请重新输入。"
+        MSG_MANAGE_MENU="NodePass 服务管理"
+        MSG_NO_SERVICES="未找到任何服务。请先安装服务。"
+        MSG_ADD_SERVICE="添加新服务"
+        MSG_BACK="返回上一级菜单"
+        MSG_SERVICE_MENU="服务操作"
+        MSG_SERVICE_START="启动服务"
+        MSG_SERVICE_STOP="停止服务"
+        MSG_SERVICE_RESTART="重启服务"
+        MSG_SERVICE_DELETE="删除服务"
+        MSG_CONFIRM_DELETE="确定要删除此服务吗？"
+        MSG_CONFIRM_YES="是，删除服务"
+        MSG_CONFIRM_NO="否，取消操作"
+        MSG_SERVICE_DELETED="服务已删除。"
+        MSG_TUNNEL_EXPLANATION="隧道地址是NodePass用于建立TLS控制通道的地址。\n服务器模式下：这是服务器监听的地址，例如 0.0.0.0:10101\n客户端模式下：这是连接到服务器的地址，例如 server.example.com:10101"
+        MSG_TARGET_EXPLANATION="目标地址是NodePass转发流量的目的地。\n服务器模式下：这是接收流量的服务地址，例如 127.0.0.1:8080\n客户端模式下：这是本地转发的地址，例如 127.0.0.1:8080"
+        MSG_SERVICE_NAME_EXPLANATION="服务名称用于标识不同的NodePass服务实例，将作为systemd服务名的一部分（np-服务名）"
+        MSG_DEBUG_EXPLANATION="调试模式将显示详细的日志信息，有助于排查问题，但会产生较多日志"
     else
         MSG_WELCOME="Welcome to NodePass Management Script!"
         MSG_ROOT="Root privileges are required to complete this operation."
@@ -218,7 +237,7 @@ load_messages() {
         MSG_ARCH_UNSUPPORTED="Unsupported architecture! NodePass only supports amd64 and arm64 architectures."
         MSG_CHECKING_VERSION="Getting latest version..."
         MSG_VERSION_DETECTED="Latest version detected:"
-        MSG_VERSION_ERROR="Unable to get latest version, please check your network connection."
+        MSG_VERSION_ERROR="Unable to get latest version. Please enter version manually (e.g., v1.0.2):"
         MSG_MIRROR="Use GitHub mirror? (Recommended for users in mainland China)"
         MSG_MIRROR_YES="Yes, use mirror"
         MSG_MIRROR_NO="No, use GitHub directly"
@@ -264,11 +283,8 @@ load_messages() {
         MSG_NOT_INSTALLED="NodePass is not installed. Please install first."
         MSG_MAIN_MENU="NodePass Management Menu"
         MSG_MENU_INSTALL="Install NodePass"
-        MSG_MENU_START="Start NodePass Service"
-        MSG_MENU_STOP="Stop NodePass Service"
-        MSG_MENU_RESTART="Restart NodePass Service"
+        MSG_MENU_MANAGE="Manage NodePass Services"
         MSG_MENU_UPDATE="Update NodePass"
-        MSG_MENU_UNINSTALL="Uninstall NodePass"
         MSG_MENU_EXIT="Exit Script"
         MSG_MENU_CHOICE="Please select an operation:"
         MSG_PRESS_ENTER="Press Enter to continue..."
@@ -282,7 +298,80 @@ load_messages() {
         MSG_INSTALLING_DEPENDENCIES="Installing dependencies..."
         MSG_DEPENDENCIES_INSTALLED="Dependencies installed successfully!"
         MSG_PACKAGE_MANAGER_NOT_FOUND="Unable to determine package manager, please install dependencies manually."
+        MSG_SERVICE_NAME="Please set a name for this service (without spaces, e.g.: web, proxy):"
+        MSG_SERVICE_EXISTS="Service name already exists, please enter another one."
+        MSG_MANAGE_MENU="NodePass Service Management"
+        MSG_NO_SERVICES="No services found. Please install a service first."
+        MSG_ADD_SERVICE="Add new service"
+        MSG_BACK="Back to previous menu"
+        MSG_SERVICE_MENU="Service Operations"
+        MSG_SERVICE_START="Start service"
+        MSG_SERVICE_STOP="Stop service"
+        MSG_SERVICE_RESTART="Restart service"
+        MSG_SERVICE_DELETE="Delete service"
+        MSG_CONFIRM_DELETE="Are you sure you want to delete this service?"
+        MSG_CONFIRM_YES="Yes, delete service"
+        MSG_CONFIRM_NO="No, cancel operation"
+        MSG_SERVICE_DELETED="Service has been deleted."
+        MSG_TUNNEL_EXPLANATION="Tunnel address is used by NodePass to establish a TLS control channel.\nServer mode: This is where the server listens, e.g., 0.0.0.0:10101\nClient mode: This is where to connect to the server, e.g., server.example.com:10101"
+        MSG_TARGET_EXPLANATION="Target address is the destination for forwarded traffic.\nServer mode: This is the service receiving traffic, e.g., 127.0.0.1:8080\nClient mode: This is the local forwarding address, e.g., 127.0.0.1:8080"
+        MSG_SERVICE_NAME_EXPLANATION="Service name is used to identify different NodePass service instances and will be part of the systemd service name (np-servicename)"
+        MSG_DEBUG_EXPLANATION="Debug mode shows detailed log information which helps troubleshooting but generates more logs"
     fi
+}
+
+# Get user input with validation
+get_user_input() {
+    local prompt="$1"
+    local variable_name="$2"
+    local explanation="$3"
+    local example="$4"
+    
+    if [ -n "$explanation" ]; then
+        echo -e "${CYAN}${explanation}${NC}"
+    fi
+    
+    if [ -n "$example" ]; then
+        echo -e "${YELLOW}Example: ${example}${NC}"
+    fi
+    
+    while true; do
+        read -p "$(echo -e ${YELLOW}${prompt}" "${NC})" input
+        if [ -n "$input" ]; then
+            eval "$variable_name='$input'"
+            break
+        fi
+        echo -e "${RED}Input required, please try again.${NC}"
+    done
+}
+
+# Get user choice with validation
+get_user_choice() {
+    local prompt="$1"
+    local options=("${@:2}")
+    local valid=false
+    local choice
+    
+    while [ "$valid" = false ]; do
+        echo -e "${CYAN}${prompt}${NC}"
+        
+        # Display options
+        for i in "${!options[@]}"; do
+            echo -e "$((i+1)). ${GREEN}${options[$i]}${NC}"
+        done
+        
+        # Get user input
+        read -p "$(echo -e ${YELLOW}"Option [1-${#options[@]}]: "${NC})" choice
+        
+        # Validate input
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#options[@]}" ]; then
+            valid=true
+        else
+            echo -e "${RED}${MSG_INVALID_CHOICE}${NC}"
+        fi
+    done
+    
+    return "$choice"
 }
 
 # Check for root privileges
@@ -318,26 +407,24 @@ get_latest_version() {
     VERSION=$(curl -s https://api.github.com/repos/yosebyte/nodepass/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
     
     if [ -z "$VERSION" ]; then
-        echo -e "${RED}${MSG_VERSION_ERROR}${NC}"
-        VERSION="v1.0.2" # Fallback to a known version
+        echo -e "${YELLOW}${MSG_VERSION_ERROR}${NC}"
+        get_user_input "${MSG_VERSION_ERROR}" VERSION
+    else
+        echo -e "${GREEN}${MSG_VERSION_DETECTED} ${VERSION}${NC}"
     fi
-    
-    echo -e "${GREEN}${MSG_VERSION_DETECTED} ${VERSION}${NC}"
 }
 
 # Ask user whether to use mirror
 ask_mirror() {
-    echo -e "${CYAN}${MSG_MIRROR}${NC}"
-    echo -e "1. ${GREEN}${MSG_MIRROR_YES}${NC}"
-    echo -e "2. ${GREEN}${MSG_MIRROR_NO}${NC}"
-    read -p "$(echo -e ${YELLOW}"Option [1/2]: "${NC})" mirror_option
+    get_user_choice "${MSG_MIRROR}" "${MSG_MIRROR_YES}" "${MSG_MIRROR_NO}"
+    local mirror_option=$?
     
     case $mirror_option in
         1)
             USE_MIRROR=true
             MIRROR_URL="https://gh-proxy.com/"
             ;;
-        2|*)
+        2)
             USE_MIRROR=false
             MIRROR_URL=""
             ;;
@@ -346,16 +433,14 @@ ask_mirror() {
 
 # Ask for installation mode
 ask_mode() {
-    echo -e "${CYAN}${MSG_SELECT_MODE}${NC}"
-    echo -e "1. ${GREEN}${MSG_MODE_CLIENT}${NC}"
-    echo -e "2. ${GREEN}${MSG_MODE_SERVER}${NC}"
-    read -p "$(echo -e ${YELLOW}"Option [1/2]: "${NC})" mode_option
+    get_user_choice "${MSG_SELECT_MODE}" "${MSG_MODE_CLIENT}" "${MSG_MODE_SERVER}"
+    local mode_option=$?
     
     case $mode_option in
         1)
             MODE="client"
             ;;
-        2|*)
+        2)
             MODE="server"
             ;;
     esac
@@ -363,17 +448,16 @@ ask_mode() {
 
 # Ask for debug mode
 ask_debug() {
-    echo -e "${CYAN}${MSG_DEBUG_MODE}${NC}"
-    echo -e "1. ${GREEN}${MSG_DEBUG_YES}${NC}"
-    echo -e "2. ${GREEN}${MSG_DEBUG_NO}${NC}"
-    read -p "$(echo -e ${YELLOW}"Option [1/2]: "${NC})" debug_option
+    echo -e "${CYAN}${MSG_DEBUG_EXPLANATION}${NC}"
+    get_user_choice "${MSG_DEBUG_MODE}" "${MSG_DEBUG_YES}" "${MSG_DEBUG_NO}"
+    local debug_option=$?
     
     case $debug_option in
         1)
             DEBUG_MODE=true
             DEBUG_PARAM="?log=debug"
             ;;
-        2|*)
+        2)
             DEBUG_MODE=false
             DEBUG_PARAM=""
             ;;
@@ -382,33 +466,59 @@ ask_debug() {
 
 # Ask for tunnel and target addresses
 ask_addresses() {
-    read -p "$(echo -e ${YELLOW}${MSG_INPUT_TUNNEL}" "${NC})" TUNNEL_ADDR
-    read -p "$(echo -e ${YELLOW}${MSG_INPUT_TARGET}" "${NC})" TARGET_ADDR
+    echo -e "${CYAN}${MSG_TUNNEL_EXPLANATION}${NC}"
+    get_user_input "${MSG_INPUT_TUNNEL}" TUNNEL_ADDR
+    
+    echo -e "${CYAN}${MSG_TARGET_EXPLANATION}${NC}"
+    get_user_input "${MSG_INPUT_TARGET}" TARGET_ADDR
 }
 
-# Save configuration
-save_config() {
-    mkdir -p $(dirname $CONFIG_PATH)
-    cat > $CONFIG_PATH << EOF
-MODE="${MODE}"
-TUNNEL_ADDR="${TUNNEL_ADDR}"
-TARGET_ADDR="${TARGET_ADDR}"
-DEBUG_MODE=${DEBUG_MODE}
-DEBUG_PARAM="${DEBUG_PARAM}"
-VERSION="${VERSION}"
-USE_MIRROR=${USE_MIRROR}
-MIRROR_URL="${MIRROR_URL}"
-EOF
+# Ask for service name
+ask_service_name() {
+    echo -e "${CYAN}${MSG_SERVICE_NAME_EXPLANATION}${NC}"
+    while true; do
+        get_user_input "${MSG_SERVICE_NAME}" SERVICE_NAME
+        
+        # Check if service already exists
+        if [ -f "${CONFIG_DIR}/services/${SERVICE_NAME}.json" ]; then
+            echo -e "${RED}${MSG_SERVICE_EXISTS}${NC}"
+        else
+            break
+        fi
+    done
 }
 
-# Load configuration
-load_config() {
-    if [ -f "$CONFIG_PATH" ]; then
-        source $CONFIG_PATH
-        return 0
+# Initialize config directory and file
+init_config() {
+    mkdir -p "${CONFIG_DIR}/services"
+    
+    if [ ! -f "$CONFIG_FILE" ]; then
+        # Create initial config file
+        echo "{\"global\":{\"version\":\"${VERSION}\",\"use_mirror\":${USE_MIRROR},\"mirror_url\":\"${MIRROR_URL}\"},\"services\":[]}" > "$CONFIG_FILE"
     else
-        return 1
+        # Update global config
+        jq ".global.version = \"${VERSION}\" | .global.use_mirror = ${USE_MIRROR} | .global.mirror_url = \"${MIRROR_URL}\"" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp"
+        mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     fi
+}
+
+# Add service to config
+add_service() {
+    # Create service config file
+    local SERVICE_CONFIG="${CONFIG_DIR}/services/${SERVICE_NAME}.json"
+    
+    echo "{
+        \"name\": \"${SERVICE_NAME}\",
+        \"mode\": \"${MODE}\",
+        \"tunnel_addr\": \"${TUNNEL_ADDR}\",
+        \"target_addr\": \"${TARGET_ADDR}\",
+        \"debug_mode\": ${DEBUG_MODE},
+        \"debug_param\": \"${DEBUG_PARAM}\"
+    }" > "$SERVICE_CONFIG"
+    
+    # Update main config file
+    jq ".services += [\"${SERVICE_NAME}\"]" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp"
+    mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 }
 
 # Download and install
@@ -449,40 +559,27 @@ download_and_install() {
 }
 
 # Setup systemd service
-setup_systemd() {
-    if ! command -v systemctl &> /dev/null; then
-        echo -e "${YELLOW}${MSG_SYSTEMD_NOT_FOUND}${NC}"
-        return
-    fi
-    
-    echo -e "${CYAN}${MSG_SYSTEMD}${NC}"
-    echo -e "1. ${GREEN}${MSG_SYSTEMD_YES}${NC}"
-    echo -e "2. ${GREEN}${MSG_SYSTEMD_NO}${NC}"
-    read -p "$(echo -e ${YELLOW}"Option [1/2]: "${NC})" systemd_option
-    
-    case $systemd_option in
-        1)
-            setup_systemd_service
-            ;;
-        2|*)
-            # Do nothing
-            ;;
-    esac
-}
-
-# Create and enable systemd service
 setup_systemd_service() {
     echo -e "${CYAN}${MSG_SYSTEMD_SETUP}${NC}"
     
+    local SERVICE_CONFIG="${CONFIG_DIR}/services/${SERVICE_NAME}.json"
+    local SERVICE_PATH="${SERVICE_DIR}/np-${SERVICE_NAME}.service"
+    
+    # Get service details
+    local S_MODE=$(jq -r .mode "$SERVICE_CONFIG")
+    local S_TUNNEL=$(jq -r .tunnel_addr "$SERVICE_CONFIG")
+    local S_TARGET=$(jq -r .target_addr "$SERVICE_CONFIG")
+    local S_DEBUG=$(jq -r .debug_param "$SERVICE_CONFIG")
+    
     # Create service file
-    cat > $SERVICE_PATH << EOF
+    cat > "$SERVICE_PATH" << EOF
 [Unit]
-Description=NodePass - Efficient TCP/UDP Tunneling Solution
+Description=NodePass (${SERVICE_NAME}) - Efficient TCP/UDP Tunneling Solution
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=$NODEPASS_PATH ${MODE}://${TUNNEL_ADDR}/${TARGET_ADDR}${DEBUG_PARAM}
+ExecStart=$NODEPASS_PATH ${S_MODE}://${S_TUNNEL}/${S_TARGET}${S_DEBUG}
 Restart=on-failure
 RestartSec=5s
 
@@ -492,77 +589,89 @@ EOF
     
     # Enable and start the service
     systemctl daemon-reload
-    systemctl enable nodepass
-    systemctl start nodepass
+    systemctl enable "np-${SERVICE_NAME}"
+    systemctl start "np-${SERVICE_NAME}"
     
-    if systemctl is-active --quiet nodepass; then
+    if systemctl is-active --quiet "np-${SERVICE_NAME}"; then
         echo -e "${GREEN}${MSG_SYSTEMD_SUCCESS}${NC}"
     else
         echo -e "${RED}${MSG_SYSTEMD_ERROR}${NC}"
     fi
 }
 
-# Start service
+# Service operations
 start_service() {
+    local service_name="$1"
     echo -e "${CYAN}${MSG_START_SERVICE}${NC}"
-    if systemctl start nodepass; then
+    if systemctl start "np-${service_name}"; then
         echo -e "${GREEN}${MSG_SERVICE_STARTED}${NC}"
     else
         echo -e "${RED}${MSG_SYSTEMD_ERROR}${NC}"
     fi
 }
 
-# Stop service
 stop_service() {
+    local service_name="$1"
     echo -e "${CYAN}${MSG_STOP_SERVICE}${NC}"
-    if systemctl stop nodepass; then
+    if systemctl stop "np-${service_name}"; then
         echo -e "${GREEN}${MSG_SERVICE_STOPPED}${NC}"
     else
         echo -e "${RED}${MSG_SYSTEMD_ERROR}${NC}"
     fi
 }
 
-# Restart service
 restart_service() {
+    local service_name="$1"
     echo -e "${CYAN}${MSG_RESTART_SERVICE}${NC}"
-    if systemctl restart nodepass; then
+    if systemctl restart "np-${service_name}"; then
         echo -e "${GREEN}${MSG_SERVICE_RESTARTED}${NC}"
     else
         echo -e "${RED}${MSG_SYSTEMD_ERROR}${NC}"
     fi
 }
 
-# Uninstall
-uninstall() {
-    echo -e "${CYAN}${MSG_UNINSTALL}${NC}"
+delete_service() {
+    local service_name="$1"
     
-    # Stop and disable service if exists
-    if [ -f "$SERVICE_PATH" ]; then
-        systemctl stop nodepass
-        systemctl disable nodepass
-        rm -f $SERVICE_PATH
-        systemctl daemon-reload
+    # Confirm deletion
+    get_user_choice "${MSG_CONFIRM_DELETE}" "${MSG_CONFIRM_YES}" "${MSG_CONFIRM_NO}"
+    local confirm=$?
+    
+    if [ "$confirm" -eq 2 ]; then
+        return
     fi
     
-    # Remove binary and config
-    rm -f $NODEPASS_PATH
-    rm -f $CONFIG_PATH
+    # Stop and disable the service
+    systemctl stop "np-${service_name}" 2>/dev/null
+    systemctl disable "np-${service_name}" 2>/dev/null
     
-    echo -e "${GREEN}${MSG_UNINSTALL_SUCCESS}${NC}"
+    # Remove service files
+    rm -f "${SERVICE_DIR}/np-${service_name}.service"
+    rm -f "${CONFIG_DIR}/services/${service_name}.json"
+    
+    # Update config file
+    jq ".services -= [\"${service_name}\"]" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp"
+    mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    
+    systemctl daemon-reload
+    
+    echo -e "${GREEN}${MSG_SERVICE_DELETED}${NC}"
 }
 
-# Update
-update() {
+# Update NodePass executable
+update_nodepass() {
     echo -e "${CYAN}${MSG_UPDATE}${NC}"
     
     # Load existing config
-    if ! load_config; then
+    if [ ! -f "$CONFIG_FILE" ]; then
         echo -e "${RED}${MSG_NOT_INSTALLED}${NC}"
         return
     fi
     
     # Check current version
-    local CURRENT_VERSION=$VERSION
+    local CURRENT_VERSION=$(jq -r '.global.version' "$CONFIG_FILE")
+    local USE_MIRROR=$(jq -r '.global.use_mirror' "$CONFIG_FILE")
+    local MIRROR_URL=$(jq -r '.global.mirror_url' "$CONFIG_FILE")
     
     # Get latest version
     echo -e "${CYAN}${MSG_UPDATE_CHECK}${NC}"
@@ -576,51 +685,42 @@ update() {
     
     echo -e "${GREEN}${MSG_UPDATE_AVAILABLE} ${VERSION}${NC}"
     
-    # Use existing mirror settings if available
-    if [[ -z "${USE_MIRROR}" ]]; then
-        ask_mirror
-    else
-        echo -e "${CYAN}Using previous mirror settings: ${USE_MIRROR}${NC}"
-    fi
-    
     # Download and install
     download_and_install
     
     # Update config
-    save_config
+    jq ".global.version = \"${VERSION}\"" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp"
+    mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     
-    # Restart service if active
-    if systemctl is-active --quiet nodepass; then
-        restart_service
-    fi
+    # Restart all services
+    local services=($(jq -r '.services[]' "$CONFIG_FILE"))
+    for service in "${services[@]}"; do
+        restart_service "$service"
+    done
     
     echo -e "${GREEN}${MSG_UPDATE_SUCCESS}${NC}"
 }
 
-# Display usage information
-show_usage() {
+# Display usage information for a service
+show_service_usage() {
+    local service_name="$1"
+    local SERVICE_CONFIG="${CONFIG_DIR}/services/${service_name}.json"
+    
+    local S_MODE=$(jq -r .mode "$SERVICE_CONFIG")
+    local S_TUNNEL=$(jq -r .tunnel_addr "$SERVICE_CONFIG")
+    local S_TARGET=$(jq -r .target_addr "$SERVICE_CONFIG")
+    local S_DEBUG=$(jq -r .debug_param "$SERVICE_CONFIG")
+    
     echo -e "${CYAN}${MSG_USAGE}${NC}"
     echo
-    echo -e "${YELLOW}${MSG_CLIENT_USAGE}${NC}"
-    echo -e "$NODEPASS_PATH client://${TUNNEL_ADDR}/${TARGET_ADDR}${DEBUG_PARAM}"
-    echo
-    echo -e "${YELLOW}${MSG_SERVER_USAGE}${NC}"
-    echo -e "$NODEPASS_PATH server://${TUNNEL_ADDR}/${TARGET_ADDR}${DEBUG_PARAM}"
-    echo
-    
-    if command -v systemctl &> /dev/null; then
-        echo -e "${YELLOW}${MSG_SERVICE_USAGE}${NC}"
-        echo -e "systemctl start nodepass    # Start service"
-        echo -e "systemctl stop nodepass     # Stop service"
-        echo -e "systemctl restart nodepass  # Restart service"
-        echo -e "systemctl status nodepass   # Check service status"
+    if [ "$S_MODE" == "client" ]; then
+        echo -e "${YELLOW}${MSG_CLIENT_USAGE}${NC}"
+    else
+        echo -e "${YELLOW}${MSG_SERVER_USAGE}${NC}"
     fi
-}
-
-# Wait for user input
-pause() {
+    
+    echo -e "$NODEPASS_PATH ${S_MODE}://${S_TUNNEL}/${S_TARGET}${S_DEBUG}"
     echo
-    read -p "$(echo -e ${YELLOW}${MSG_PRESS_ENTER}${NC})"
 }
 
 # Install function
@@ -631,16 +731,225 @@ do_install() {
     detect_arch
     get_latest_version
     ask_mirror
+    ask_service_name
     ask_mode
     ask_addresses
     ask_debug
+    
     download_and_install
-    save_config
-    setup_systemd
+    init_config
+    add_service
+    
+    # Set up systemd service if available, otherwise prompt user
+    if command -v systemctl &> /dev/null; then
+        setup_systemd_service
+    else
+        echo -e "${YELLOW}${MSG_SYSTEMD_NOT_FOUND}${NC}"
+    fi
     
     echo -e "\n${GREEN}${MSG_COMPLETE}${NC}\n"
-    show_usage
+    show_service_usage "$SERVICE_NAME"
     pause
+}
+
+# Service menu
+show_service_menu() {
+    local service_name="$1"
+    local SERVICE_CONFIG="${CONFIG_DIR}/services/${service_name}.json"
+    
+    while true; do
+        clear
+        show_logo
+        
+        local mode=$(jq -r .mode "$SERVICE_CONFIG")
+        local tunnel=$(jq -r .tunnel_addr "$SERVICE_CONFIG")
+        local target=$(jq -r .target_addr "$SERVICE_CONFIG")
+        local debug=$(jq -r .debug_mode "$SERVICE_CONFIG")
+        
+        # Show debug as Yes/No
+        local debug_display="No"
+        if [ "$debug" == "true" ]; then
+            debug_display="Yes"
+        fi
+        
+        echo -e "${PURPLE}${MSG_SERVICE_MENU}: ${GREEN}np-${service_name}${NC}\n"
+        echo -e "${CYAN}URL: ${NC}${mode}://${tunnel}/${target}"
+        echo -e "${CYAN}Debug: ${NC}${debug_display}\n"
+        
+        get_user_choice "${MSG_MENU_CHOICE}" \
+            "${MSG_SERVICE_START}" \
+            "${MSG_SERVICE_STOP}" \
+            "${MSG_SERVICE_RESTART}" \
+            "${MSG_SERVICE_DELETE}" \
+            "${MSG_BACK}"
+        
+        local choice=$?
+        
+        case $choice in
+            1) 
+                start_service "$service_name"
+                pause
+                ;;
+            2)
+                stop_service "$service_name"
+                pause
+                ;;
+            3)
+                restart_service "$service_name"
+                pause
+                ;;
+            4)
+                delete_service "$service_name"
+                if [ $? -eq 0 ]; then
+                    # Return to manage menu if service was deleted
+                    break
+                fi
+                pause
+                ;;
+            5)
+                # Back to manage menu
+                break
+                ;;
+        esac
+    done
+}
+
+# Manage services menu
+manage_services() {
+    while true; do
+        clear
+        show_logo
+        echo -e "${PURPLE}${MSG_MANAGE_MENU}${NC}\n"
+        
+        # Check if there are any services
+        if [ ! -f "$CONFIG_FILE" ] || [ "$(jq '.services | length' "$CONFIG_FILE")" -eq 0 ]; then
+            echo -e "${YELLOW}${MSG_NO_SERVICES}${NC}\n"
+            get_user_choice "${MSG_MENU_CHOICE}" \
+                "${MSG_ADD_SERVICE}" \
+                "${MSG_BACK}"
+            
+            local choice=$?
+            
+            if [ $choice -eq 1 ]; then
+                ask_service_name
+                ask_mode
+                ask_addresses
+                ask_debug
+                
+                init_config
+                add_service
+                
+                if command -v systemctl &> /dev/null; then
+                    setup_systemd_service
+                else
+                    echo -e "${YELLOW}${MSG_SYSTEMD_NOT_FOUND}${NC}"
+                fi
+                
+                pause
+            else
+                break
+            fi
+        else
+            # List all services
+            local services=($(jq -r '.services[]' "$CONFIG_FILE"))
+            
+            echo -e "${CYAN}Available services:${NC}\n"
+            
+            for i in "${!services[@]}"; do
+                local name="${services[$i]}"
+                local CONFIG="${CONFIG_DIR}/services/${name}.json"
+                local mode=$(jq -r .mode "$CONFIG")
+                local tunnel=$(jq -r .tunnel_addr "$CONFIG")
+                local target=$(jq -r .target_addr "$CONFIG")
+                
+                # Check service status
+                local status="Unknown"
+                if systemctl is-active --quiet "np-${name}"; then
+                    status="${GREEN}Running${NC}"
+                else
+                    status="${RED}Stopped${NC}"
+                fi
+                
+                echo -e "$((i+1)). ${GREEN}np-${name}${NC} - ${CYAN}${mode}://${tunnel}/${target}${NC} - Status: ${status}"
+            done
+            
+            echo
+            echo -e "$((${#services[@]}+1)). ${GREEN}${MSG_ADD_SERVICE}${NC}"
+            echo -e "$((${#services[@]}+2)). ${GREEN}${MSG_BACK}${NC}"
+            echo
+            
+            read -p "$(echo -e ${YELLOW}"${MSG_MENU_CHOICE} "${NC})" manage_choice
+            
+            if [[ ! "$manage_choice" =~ ^[0-9]+$ ]]; then
+                echo -e "${RED}${MSG_INVALID_CHOICE}${NC}"
+                pause
+                continue
+            fi
+            
+            if [ "$manage_choice" -ge 1 ] && [ "$manage_choice" -le "${#services[@]}" ]; then
+                # Service selected
+                show_service_menu "${services[$((manage_choice-1))]}"
+            elif [ "$manage_choice" -eq "$((${#services[@]}+1))" ]; then
+                # Add new service
+                ask_service_name
+                ask_mode
+                ask_addresses
+                ask_debug
+                
+                add_service
+                
+                if command -v systemctl &> /dev/null; then
+                    setup_systemd_service
+                else
+                    echo -e "${YELLOW}${MSG_SYSTEMD_NOT_FOUND}${NC}"
+                fi
+                
+                pause
+            elif [ "$manage_choice" -eq "$((${#services[@]}+2))" ]; then
+                # Back to main menu
+                break
+            else
+                echo -e "${RED}${MSG_INVALID_CHOICE}${NC}"
+                pause
+            fi
+        fi
+    done
+}
+
+# Uninstall everything
+uninstall_all() {
+    echo -e "${CYAN}${MSG_UNINSTALL}${NC}"
+    
+    # Check if nodepass is installed
+    if [ ! -f "$NODEPASS_PATH" ]; then
+        echo -e "${RED}${MSG_NOT_INSTALLED}${NC}"
+        return
+    fi
+    
+    # Stop and disable all services
+    if [ -f "$CONFIG_FILE" ]; then
+        local services=($(jq -r '.services[]' "$CONFIG_FILE"))
+        for service in "${services[@]}"; do
+            systemctl stop "np-${service}" 2>/dev/null
+            systemctl disable "np-${service}" 2>/dev/null
+            rm -f "${SERVICE_DIR}/np-${service}.service"
+        done
+    fi
+    
+    # Remove binary and config
+    rm -f $NODEPASS_PATH
+    rm -rf $CONFIG_DIR
+    
+    # Reload systemd
+    systemctl daemon-reload
+    
+    echo -e "${GREEN}${MSG_UNINSTALL_SUCCESS}${NC}"
+}
+
+# Wait for user input
+pause() {
+    echo
+    read -p "$(echo -e ${YELLOW}${MSG_PRESS_ENTER}${NC})"
 }
 
 # Display menu and get user choice
@@ -649,18 +958,14 @@ show_menu() {
     show_logo
     echo -e "${PURPLE}${MSG_MAIN_MENU}${NC}\n"
     
-    echo -e "1. ${GREEN}${MSG_MENU_INSTALL}${NC}"
-    echo -e "2. ${GREEN}${MSG_MENU_START}${NC}"
-    echo -e "3. ${GREEN}${MSG_MENU_STOP}${NC}"
-    echo -e "4. ${GREEN}${MSG_MENU_RESTART}${NC}"
-    echo -e "5. ${GREEN}${MSG_MENU_UPDATE}${NC}"
-    echo -e "6. ${GREEN}${MSG_MENU_UNINSTALL}${NC}"
-    echo -e "7. ${GREEN}${MSG_MENU_EXIT}${NC}"
-    echo
+    get_user_choice "${MSG_MENU_CHOICE}" \
+        "${MSG_MENU_INSTALL}" \
+        "${MSG_MENU_MANAGE}" \
+        "${MSG_MENU_UPDATE}" \
+        "${MSG_UNINSTALL}" \
+        "${MSG_MENU_EXIT}"
     
-    read -p "$(echo -e ${YELLOW}${MSG_MENU_CHOICE}" "${NC})" choice
-    
-    return $choice
+    return $?
 }
 
 # Main function
@@ -678,49 +983,19 @@ main() {
         
         case $choice in
             1) do_install ;;
-            2) 
-                if load_config; then
-                    start_service
-                    pause
-                else
-                    echo -e "${RED}${MSG_NOT_INSTALLED}${NC}"
-                    pause
-                fi
-                ;;
+            2) manage_services ;;
             3)
-                if load_config; then
-                    stop_service
-                    pause
-                else
-                    echo -e "${RED}${MSG_NOT_INSTALLED}${NC}"
-                    pause
-                fi
+                update_nodepass
+                pause
                 ;;
             4)
-                if load_config; then
-                    restart_service
-                    pause
-                else
-                    echo -e "${RED}${MSG_NOT_INSTALLED}${NC}"
-                    pause
-                fi
+                uninstall_all
+                pause
                 ;;
             5)
-                update
-                pause
-                ;;
-            6)
-                uninstall
-                pause
-                ;;
-            7)
                 clear
                 echo -e "${GREEN}${MSG_EXIT}${NC}"
                 exit 0
-                ;;
-            *)
-                echo -e "${RED}${MSG_INVALID_CHOICE}${NC}"
-                pause
                 ;;
         esac
     done
