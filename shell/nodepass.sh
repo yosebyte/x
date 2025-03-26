@@ -23,36 +23,22 @@ show_logo() {
     clear
     echo -e "${BLUE}"
     cat << "EOF"
-.---------------------------------.
-|░█▀█░█▀█░█▀▄░█▀▀░█▀█░█▀█░█▀▀░█▀▀░|
-|░█░█░█░█░█░█░█▀▀░█▀▀░█▀█░▀▀█░▀▀█░|
-|░▀░▀░▀▀▀░▀▀░░▀▀▀░▀░░░▀░▀░▀▀▀░▀▀▀░|
-'---------------------------------'
+╭───────────────────────────────────────╮
+│  ░░█▀█░█▀█░█▀▄░█▀▀░█▀█░█▀█░█▀▀░█▀▀░░  │
+│  ░░█░█░█░█░█░█░█▀▀░█▀▀░█▀█░▀▀█░▀▀█░░  │
+│  ░░▀░▀░▀▀▀░▀▀░░▀▀▀░▀░░░▀░▀░▀▀▀░▀▀▀░░  │
+├───────────────────────────────────────┤
+│      github.com/yosebyte/nodepass     │
+╰───────────────────────────────────────╯
+
 EOF
     echo -e "${NC}"
-    echo -e "${GREEN}https://github.com/yosebyte/nodepass${NC}"
     
     # Language-specific version display
     if [ "$LANG" == "zh" ]; then
         echo -e "${YELLOW}版本: $(get_version_info)${NC}"
-        echo
-        echo -e "╭───────────────────────────────────────╮"
-        echo -e "│ ${PURPLE}优雅高效的TCP/UDP隧道解决方案${NC}          │"
-        echo -e "├───────────────────────────────────────┤"
-        echo -e "│ ⚡ ${CYAN}支持TCP/UDP协议   ⚡ TLS安全加密${NC}      │"
-        echo -e "│ ⚡ ${CYAN}智能连接池管理   ⚡ 低资源占用${NC}        │"
-        echo -e "│ ⚡ ${CYAN}高可靠性能       ⚡ 高速度传输${NC}        │"
-        echo -e "╰───────────────────────────────────────╯"
     else
         echo -e "${YELLOW}Version: $(get_version_info)${NC}"
-        echo
-        echo -e "╭───────────────────────────────────────╮"
-        echo -e "│ ${PURPLE}Elegant TCP/UDP Tunneling Solution${NC}     │"
-        echo -e "├───────────────────────────────────────┤"
-        echo -e "│ ⚡ ${CYAN}TCP/UDP Support    ⚡ TLS Encrypted${NC}    │"
-        echo -e "│ ⚡ ${CYAN}Smart Connection   ⚡ Low Footprint${NC}    │"
-        echo -e "│ ⚡ ${CYAN}High Reliability   ⚡ High Speed${NC}       │"
-        echo -e "╰───────────────────────────────────────╯"
     fi
     echo
 }
@@ -218,7 +204,7 @@ load_messages() {
         MSG_SERVICE_STARTED="服务已启动。"
         MSG_SERVICE_STOPPED="服务已停止。"
         MSG_SERVICE_RESTARTED="服务已重启。"
-        MSG_UNINSTALL="卸载 NodePass..."
+        MSG_UNINSTALL="卸载 NodePass"
         MSG_UNINSTALL_SUCCESS="卸载成功！"
         MSG_UPDATE="更新 NodePass..."
         MSG_UPDATE_CHECK="检查更新..."
@@ -230,7 +216,7 @@ load_messages() {
         MSG_MAIN_MENU="NodePass 管理菜单"
         MSG_MENU_INSTALL="安装 NodePass"
         MSG_MENU_UPDATE="更新 NodePass"
-        MSG_MENU_MANAGE="管理 NodePass 服务"
+        MSG_MENU_MANAGE="管理 NodePass"
         MSG_MENU_EXIT="退出脚本"
         MSG_MISSING_DEPENDENCIES="缺少必需的依赖项："
         MSG_INSTALL_DEPENDENCIES_PROMPT="是否安装缺少的依赖项？"
@@ -264,6 +250,17 @@ load_messages() {
         MSG_CUSTOM_MIRROR_NO="否，取消安装"
         MSG_CUSTOM_MIRROR_URL="请输入自定义GitHub镜像URL (如 https://gh-proxy.com/ )："
         MSG_RETRY_DOWNLOAD="正在使用自定义镜像重新下载..."
+        MSG_PRESS_ENTER="按回车键继续..."
+        MSG_EXIT="感谢使用 NodePass 管理脚本！"
+        MSG_INVALID_CHOICE="无效选择，请重试。"
+        MSG_MENU_CHOICE="请选择一个选项："
+        MSG_AVAILABLE_SERVICES="可用服务："
+        MSG_URL="URL:"
+        MSG_DEBUG="调试模式:"
+        MSG_STATUS="状态:"
+        MSG_RUNNING="运行中"
+        MSG_STOPPED="已停止"
+        MSG_UNKNOWN="未知"
     else
         MSG_WELCOME="Welcome to NodePass Management Script!"
         MSG_ROOT="Root privileges are required to complete this operation."
@@ -307,7 +304,7 @@ load_messages() {
         MSG_SERVICE_STARTED="Service started."
         MSG_SERVICE_STOPPED="Service stopped."
         MSG_SERVICE_RESTARTED="Service restarted."
-        MSG_UNINSTALL="Uninstalling NodePass..."
+        MSG_UNINSTALL="Remove NodePass"
         MSG_UNINSTALL_SUCCESS="Uninstallation successful!"
         MSG_UPDATE="Updating NodePass..."
         MSG_UPDATE_CHECK="Checking for updates..."
@@ -319,7 +316,7 @@ load_messages() {
         MSG_MAIN_MENU="NodePass Management Menu"
         MSG_MENU_INSTALL="Install NodePass"
         MSG_MENU_UPDATE="Update NodePass"
-        MSG_MENU_MANAGE="Manage NodePass Services"
+        MSG_MENU_MANAGE="Manage NodePass"
         MSG_MENU_EXIT="Exit Script"
         MSG_MISSING_DEPENDENCIES="Missing required dependencies:"
         MSG_INSTALL_DEPENDENCIES_PROMPT="Install missing dependencies?"
@@ -353,6 +350,17 @@ load_messages() {
         MSG_CUSTOM_MIRROR_NO="No, cancel installation"
         MSG_CUSTOM_MIRROR_URL="Please enter custom GitHub mirror URL (e.g. https://gh-proxy.com/ ):"
         MSG_RETRY_DOWNLOAD="Retrying download with custom mirror..."
+        MSG_PRESS_ENTER="Press Enter to continue..."
+        MSG_EXIT="Thank you for using NodePass Management Script!"
+        MSG_INVALID_CHOICE="Invalid choice, please try again."
+        MSG_MENU_CHOICE="Please select an option:"
+        MSG_AVAILABLE_SERVICES="Available services:"
+        MSG_URL="URL:"
+        MSG_DEBUG="Debug:"
+        MSG_STATUS="Status:"
+        MSG_RUNNING="Running"
+        MSG_STOPPED="Stopped"
+        MSG_UNKNOWN="Unknown"
     fi
 }
 
@@ -864,8 +872,8 @@ show_service_menu() {
         fi
         
         echo -e "${PURPLE}${MSG_SERVICE_MENU}: ${GREEN}np-${service_name}${NC}\n"
-        echo -e "${CYAN}URL: ${NC}${mode}://${tunnel}/${target}"
-        echo -e "${CYAN}Debug: ${NC}${debug_display}\n"
+        echo -e "${CYAN}${MSG_URL} ${NC}${mode}://${tunnel}/${target}"
+        echo -e "${CYAN}${MSG_DEBUG} ${NC}${debug_display}\n"
         
         get_user_choice "${MSG_MENU_CHOICE}" \
             "${MSG_SERVICE_START}" \
@@ -944,7 +952,7 @@ manage_services() {
             # List all services
             local services=($(jq -r '.services[]' "$CONFIG_FILE"))
             
-            echo -e "${CYAN}Available services:${NC}\n"
+            echo -e "${CYAN}${MSG_AVAILABLE_SERVICES}${NC}\n"
             
             for i in "${!services[@]}"; do
                 local name="${services[$i]}"
@@ -954,14 +962,14 @@ manage_services() {
                 local target=$(jq -r .target_addr "$CONFIG")
                 
                 # Check service status
-                local status="Unknown"
+                local status="${MSG_UNKNOWN}"
                 if systemctl is-active --quiet "np-${name}"; then
-                    status="${GREEN}Running${NC}"
+                    status="${GREEN}${MSG_RUNNING}${NC}"
                 else
-                    status="${RED}Stopped${NC}"
+                    status="${RED}${MSG_STOPPED}${NC}"
                 fi
                 
-                echo -e "$((i+1)). ${GREEN}np-${name}${NC} - ${CYAN}${mode}://${tunnel}/${target}${NC} - Status: ${status}"
+                echo -e "$((i+1)). ${GREEN}np-${name}${NC} - ${CYAN}${mode}://${tunnel}/${target}${NC} - ${MSG_STATUS} ${status}"
             done
             
             echo
