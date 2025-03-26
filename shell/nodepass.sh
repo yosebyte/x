@@ -31,7 +31,29 @@ show_logo() {
 EOF
     echo -e "${NC}"
     echo -e "${GREEN}https://github.com/yosebyte/nodepass${NC}"
-    echo -e "${YELLOW}Version: $(get_version_info)${NC}"
+    
+    # Language-specific version display
+    if [ "$LANG" == "zh" ]; then
+        echo -e "${YELLOW}版本: $(get_version_info)${NC}"
+        echo
+        echo -e "╭───────────────────────────────────────╮"
+        echo -e "│ ${PURPLE}优雅高效的TCP/UDP隧道解决方案${NC}          │"
+        echo -e "├───────────────────────────────────────┤"
+        echo -e "│ ⚡ ${CYAN}支持TCP/UDP协议   ⚡ TLS安全加密${NC}      │"
+        echo -e "│ ⚡ ${CYAN}智能连接池管理   ⚡ 低资源占用${NC}        │"
+        echo -e "│ ⚡ ${CYAN}高可靠性能       ⚡ 高速度传输${NC}        │"
+        echo -e "╰───────────────────────────────────────╯"
+    else
+        echo -e "${YELLOW}Version: $(get_version_info)${NC}"
+        echo
+        echo -e "╭───────────────────────────────────────╮"
+        echo -e "│ ${PURPLE}Elegant TCP/UDP Tunneling Solution${NC}     │"
+        echo -e "├───────────────────────────────────────┤"
+        echo -e "│ ⚡ ${CYAN}TCP/UDP Support    ⚡ TLS Encrypted${NC}    │"
+        echo -e "│ ⚡ ${CYAN}Smart Connection   ⚡ Low Footprint${NC}    │"
+        echo -e "│ ⚡ ${CYAN}High Reliability   ⚡ High Speed${NC}       │"
+        echo -e "╰───────────────────────────────────────╯"
+    fi
     echo
 }
 
@@ -108,15 +130,27 @@ get_version_info() {
         if [ -f "$CONFIG_FILE" ]; then
             VERSION=$(jq -r '.global.version' "$CONFIG_FILE" 2>/dev/null)
             if [[ "$VERSION" == "null" || -z "$VERSION" ]]; then
-                echo "Unknown"
+                if [ "$LANG" == "zh" ]; then
+                    echo "未知"
+                else
+                    echo "Unknown"
+                fi
             else
                 echo "$VERSION"
             fi
         else
-            echo "Unknown"
+            if [ "$LANG" == "zh" ]; then
+                echo "未知"
+            else
+                echo "Unknown"
+            fi
         fi
     else
-        echo "Not Installed"
+        if [ "$LANG" == "zh" ]; then
+            echo "未安装"
+        else
+            echo "Not Installed"
+        fi
     fi
 }
 
@@ -128,13 +162,13 @@ select_language() {
     read -p "$(echo -e ${YELLOW}"请输入选项 / Please enter option [1/2]: "${NC})" lang_option
 
     case $lang_option in
-        1)
-            LANG="zh"
-            echo -e "${GREEN}已选择中文${NC}\n"
-            ;;
-        2|*)
+        2)
             LANG="en"
             echo -e "${GREEN}English selected${NC}\n"
+            ;;
+        *)
+            LANG="zh"
+            echo -e "${GREEN}已选择中文${NC}\n"
             ;;
     esac
 }
@@ -149,15 +183,15 @@ load_messages() {
         MSG_ARCH_UNSUPPORTED="不支持的系统架构！NodePass 仅支持 amd64 和 arm64 架构。"
         MSG_CHECKING_VERSION="获取最新版本..."
         MSG_VERSION_DETECTED="检测到最新版本："
-        MSG_VERSION_ERROR="无法获取最新版本，请手动输入版本号（例如: v1.0.2）："
-        MSG_MIRROR="是否使用 GitHub 镜像？(中国大陆用户推荐使用)"
+        MSG_VERSION_ERROR="无法获取最新版本，请手动输入版本号（格式: v0.0.0）："
+        MSG_MIRROR="是否使用 GitHub 镜像？(gh-proxy.com)"
         MSG_MIRROR_YES="是，使用镜像"
-        MSG_MIRROR_NO="否，使用 GitHub 原站"
+        MSG_MIRROR_NO="否，使用原站"
         MSG_SELECT_MODE="请选择安装模式："
         MSG_MODE_CLIENT="客户端模式"
         MSG_MODE_SERVER="服务器模式"
-        MSG_INPUT_TUNNEL="请输入隧道地址 (例如: 10.1.0.1:10101)："
-        MSG_INPUT_TARGET="请输入目标地址 (例如: 127.0.0.1:8080)："
+        MSG_INPUT_TUNNEL="请输入隧道地址 (格式: IP地址:端口号)："
+        MSG_INPUT_TARGET="请输入目标地址 (格式: IP地址:端口号)："
         MSG_DEBUG_MODE="是否启用调试模式？"
         MSG_DEBUG_YES="是，启用调试模式"
         MSG_DEBUG_NO="否，使用默认日志级别"
@@ -195,13 +229,9 @@ load_messages() {
         MSG_NOT_INSTALLED="NodePass 未安装，请先安装。"
         MSG_MAIN_MENU="NodePass 管理菜单"
         MSG_MENU_INSTALL="安装 NodePass"
-        MSG_MENU_MANAGE="管理 NodePass 服务"
         MSG_MENU_UPDATE="更新 NodePass"
+        MSG_MENU_MANAGE="管理 NodePass 服务"
         MSG_MENU_EXIT="退出脚本"
-        MSG_MENU_CHOICE="请选择操作："
-        MSG_PRESS_ENTER="按回车键继续..."
-        MSG_INVALID_CHOICE="无效选择，请重试。"
-        MSG_EXIT="感谢使用 NodePass 管理脚本！"
         MSG_MISSING_DEPENDENCIES="缺少必需的依赖项："
         MSG_INSTALL_DEPENDENCIES_PROMPT="是否安装缺少的依赖项？"
         MSG_INSTALL_DEPENDENCIES_YES="是，安装依赖项"
@@ -210,7 +240,7 @@ load_messages() {
         MSG_INSTALLING_DEPENDENCIES="正在安装依赖项..."
         MSG_DEPENDENCIES_INSTALLED="依赖项安装成功！"
         MSG_PACKAGE_MANAGER_NOT_FOUND="无法确定包管理器，请手动安装依赖项。"
-        MSG_SERVICE_NAME="请为此服务设置一个名称（不含空格，例如：web、proxy）："
+        MSG_SERVICE_NAME="请为此服务设置一个名称（不含空格，例如：ssh、dns）："
         MSG_SERVICE_EXISTS="服务名称已存在，请重新输入。"
         MSG_MANAGE_MENU="NodePass 服务管理"
         MSG_NO_SERVICES="未找到任何服务。请先安装服务。"
@@ -226,9 +256,14 @@ load_messages() {
         MSG_CONFIRM_NO="否，取消操作"
         MSG_SERVICE_DELETED="服务已删除。"
         MSG_TUNNEL_EXPLANATION="隧道地址是NodePass用于建立TLS控制通道的地址。\n服务器模式下：这是服务器监听的地址，例如 0.0.0.0:10101\n客户端模式下：这是连接到服务器的地址，例如 server.example.com:10101"
-        MSG_TARGET_EXPLANATION="目标地址是NodePass转发流量的目的地。\n服务器模式下：这是接收流量的服务地址，例如 127.0.0.1:8080\n客户端模式下：这是本地转发的地址，例如 127.0.0.1:8080"
+        MSG_TARGET_EXPLANATION="目标地址是NodePass用于接收转发业务数据的地址。\n服务器模式下：这是目标业务的外部地址，例如 0.0.0.0:10022\n客户端模式下：这是客户端可以访问的目标业务地址，例如 127.0.0.1:22"
         MSG_SERVICE_NAME_EXPLANATION="服务名称用于标识不同的NodePass服务实例，将作为systemd服务名的一部分（np-服务名）"
         MSG_DEBUG_EXPLANATION="调试模式将显示详细的日志信息，有助于排查问题，但会产生较多日志"
+        MSG_CUSTOM_MIRROR_PROMPT="是否使用自定义GitHub镜像？"
+        MSG_CUSTOM_MIRROR_YES="是，使用自定义镜像"
+        MSG_CUSTOM_MIRROR_NO="否，取消安装"
+        MSG_CUSTOM_MIRROR_URL="请输入自定义GitHub镜像URL (如 https://gh-proxy.com/ )："
+        MSG_RETRY_DOWNLOAD="正在使用自定义镜像重新下载..."
     else
         MSG_WELCOME="Welcome to NodePass Management Script!"
         MSG_ROOT="Root privileges are required to complete this operation."
@@ -237,15 +272,15 @@ load_messages() {
         MSG_ARCH_UNSUPPORTED="Unsupported architecture! NodePass only supports amd64 and arm64 architectures."
         MSG_CHECKING_VERSION="Getting latest version..."
         MSG_VERSION_DETECTED="Latest version detected:"
-        MSG_VERSION_ERROR="Unable to get latest version. Please enter version manually (e.g., v1.0.2):"
-        MSG_MIRROR="Use GitHub mirror? (Recommended for users in mainland China)"
+        MSG_VERSION_ERROR="Unable to get latest version. Please enter version manually (format: v0.0.0):"
+        MSG_MIRROR="Use GitHub mirror? (gh-proxy.com)"
         MSG_MIRROR_YES="Yes, use mirror"
-        MSG_MIRROR_NO="No, use GitHub directly"
+        MSG_MIRROR_NO="No, use direct connection"
         MSG_SELECT_MODE="Please select installation mode:"
         MSG_MODE_CLIENT="Client mode"
         MSG_MODE_SERVER="Server mode"
-        MSG_INPUT_TUNNEL="Please enter tunnel address (e.g., 10.1.0.1:10101):"
-        MSG_INPUT_TARGET="Please enter target address (e.g., 127.0.0.1:8080):"
+        MSG_INPUT_TUNNEL="Please enter tunnel address (format: IP:port):"
+        MSG_INPUT_TARGET="Please enter target address (format: IP:port):"
         MSG_DEBUG_MODE="Enable debug mode?"
         MSG_DEBUG_YES="Yes, enable debug mode"
         MSG_DEBUG_NO="No, use default log level"
@@ -283,13 +318,9 @@ load_messages() {
         MSG_NOT_INSTALLED="NodePass is not installed. Please install first."
         MSG_MAIN_MENU="NodePass Management Menu"
         MSG_MENU_INSTALL="Install NodePass"
-        MSG_MENU_MANAGE="Manage NodePass Services"
         MSG_MENU_UPDATE="Update NodePass"
+        MSG_MENU_MANAGE="Manage NodePass Services"
         MSG_MENU_EXIT="Exit Script"
-        MSG_MENU_CHOICE="Please select an operation:"
-        MSG_PRESS_ENTER="Press Enter to continue..."
-        MSG_INVALID_CHOICE="Invalid choice, please try again."
-        MSG_EXIT="Thank you for using the NodePass Management Script!"
         MSG_MISSING_DEPENDENCIES="Missing required dependencies:"
         MSG_INSTALL_DEPENDENCIES_PROMPT="Install missing dependencies?"
         MSG_INSTALL_DEPENDENCIES_YES="Yes, install dependencies"
@@ -298,7 +329,7 @@ load_messages() {
         MSG_INSTALLING_DEPENDENCIES="Installing dependencies..."
         MSG_DEPENDENCIES_INSTALLED="Dependencies installed successfully!"
         MSG_PACKAGE_MANAGER_NOT_FOUND="Unable to determine package manager, please install dependencies manually."
-        MSG_SERVICE_NAME="Please set a name for this service (without spaces, e.g.: web, proxy):"
+        MSG_SERVICE_NAME="Please set a name for this service (without spaces, e.g.: ssh, dns):"
         MSG_SERVICE_EXISTS="Service name already exists, please enter another one."
         MSG_MANAGE_MENU="NodePass Service Management"
         MSG_NO_SERVICES="No services found. Please install a service first."
@@ -314,9 +345,14 @@ load_messages() {
         MSG_CONFIRM_NO="No, cancel operation"
         MSG_SERVICE_DELETED="Service has been deleted."
         MSG_TUNNEL_EXPLANATION="Tunnel address is used by NodePass to establish a TLS control channel.\nServer mode: This is where the server listens, e.g., 0.0.0.0:10101\nClient mode: This is where to connect to the server, e.g., server.example.com:10101"
-        MSG_TARGET_EXPLANATION="Target address is the destination for forwarded traffic.\nServer mode: This is the service receiving traffic, e.g., 127.0.0.1:8080\nClient mode: This is the local forwarding address, e.g., 127.0.0.1:8080"
+        MSG_TARGET_EXPLANATION="Target address is where NodePass forwards business data.\nServer mode: This is the external address for target business, e.g., 0.0.0.0:10022\nClient mode: This is the target business address accessible from client, e.g., 127.0.0.1:22"
         MSG_SERVICE_NAME_EXPLANATION="Service name is used to identify different NodePass service instances and will be part of the systemd service name (np-servicename)"
         MSG_DEBUG_EXPLANATION="Debug mode shows detailed log information which helps troubleshooting but generates more logs"
+        MSG_CUSTOM_MIRROR_PROMPT="Would you like to use a custom GitHub mirror?"
+        MSG_CUSTOM_MIRROR_YES="Yes, use a custom mirror"
+        MSG_CUSTOM_MIRROR_NO="No, cancel installation"
+        MSG_CUSTOM_MIRROR_URL="Please enter custom GitHub mirror URL (e.g. https://gh-proxy.com/ ):"
+        MSG_RETRY_DOWNLOAD="Retrying download with custom mirror..."
     fi
 }
 
@@ -521,6 +557,23 @@ add_service() {
     mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 }
 
+# Ask for custom mirror URL
+ask_custom_mirror_url() {
+    get_user_choice "${MSG_CUSTOM_MIRROR_PROMPT}" "${MSG_CUSTOM_MIRROR_YES}" "${MSG_CUSTOM_MIRROR_NO}"
+    local custom_mirror_option=$?
+    
+    if [ "$custom_mirror_option" -eq 1 ]; then
+        get_user_input "${MSG_CUSTOM_MIRROR_URL}" CUSTOM_MIRROR_URL
+        USE_MIRROR=true
+        MIRROR_URL="${CUSTOM_MIRROR_URL}"
+        # Ensure URL ends with a trailing slash
+        [[ "${MIRROR_URL}" != */ ]] && MIRROR_URL="${MIRROR_URL}/"
+        return 0
+    else
+        return 1
+    fi
+}
+
 # Download and install
 download_and_install() {
     echo -e "${CYAN}${MSG_DOWNLOADING}${NC}"
@@ -542,7 +595,25 @@ download_and_install() {
         echo -e "${GREEN}${MSG_DOWNLOAD_SUCCESS}${NC}"
     else
         echo -e "${RED}${MSG_DOWNLOAD_ERROR}${NC}"
-        exit 1
+        
+        # Offer to use custom mirror
+        if ask_custom_mirror_url; then
+            echo -e "${CYAN}${MSG_RETRY_DOWNLOAD}${NC}"
+            DOWNLOAD_URL="${MIRROR_URL}https://github.com/yosebyte/nodepass/releases/download/${VERSION}/${FILENAME}"
+            
+            if curl -L -o "${FILENAME}" "${DOWNLOAD_URL}"; then
+                echo -e "${GREEN}${MSG_DOWNLOAD_SUCCESS}${NC}"
+            else
+                echo -e "${RED}${MSG_DOWNLOAD_ERROR}${NC}"
+                cd - > /dev/null
+                rm -rf $TMP_DIR
+                exit 1
+            fi
+        else
+            cd - > /dev/null
+            rm -rf $TMP_DIR
+            exit 1
+        fi
     fi
     
     # Extract and install
@@ -685,6 +756,15 @@ update_nodepass() {
     
     echo -e "${GREEN}${MSG_UPDATE_AVAILABLE} ${VERSION}${NC}"
     
+    # Check and store running services before update
+    local services=($(jq -r '.services[]' "$CONFIG_FILE"))
+    local running_services=()
+    for service in "${services[@]}"; do
+        if systemctl is-active --quiet "np-${service}"; then
+            running_services+=("$service")
+        fi
+    done
+    
     # Download and install
     download_and_install
     
@@ -692,13 +772,13 @@ update_nodepass() {
     jq ".global.version = \"${VERSION}\"" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp"
     mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     
-    # Restart all services
-    local services=($(jq -r '.services[]' "$CONFIG_FILE"))
-    for service in "${services[@]}"; do
+    # Restart only previously running services
+    for service in "${running_services[@]}"; do
         restart_service "$service"
     done
     
     echo -e "${GREEN}${MSG_UPDATE_SUCCESS}${NC}"
+    pause
 }
 
 # Display usage information for a service
@@ -750,6 +830,17 @@ do_install() {
     echo -e "\n${GREEN}${MSG_COMPLETE}${NC}\n"
     show_service_usage "$SERVICE_NAME"
     pause
+}
+
+# New function to determine whether to install or update
+install_or_update() {
+    if [ -f "$NODEPASS_PATH" ]; then
+        # NodePass is installed, run update
+        update_nodepass
+    else
+        # NodePass is not installed, run install
+        do_install
+    fi
 }
 
 # Service menu
@@ -814,7 +905,7 @@ show_service_menu() {
     done
 }
 
-# Manage services menu
+# Manage services
 manage_services() {
     while true; do
         clear
@@ -958,10 +1049,17 @@ show_menu() {
     show_logo
     echo -e "${PURPLE}${MSG_MAIN_MENU}${NC}\n"
     
+    # Check if NodePass is installed and choose appropriate menu text
+    local first_option
+    if [ -f "$NODEPASS_PATH" ]; then
+        first_option="${MSG_MENU_UPDATE}"
+    else
+        first_option="${MSG_MENU_INSTALL}"
+    fi
+    
     get_user_choice "${MSG_MENU_CHOICE}" \
-        "${MSG_MENU_INSTALL}" \
+        "$first_option" \
         "${MSG_MENU_MANAGE}" \
-        "${MSG_MENU_UPDATE}" \
         "${MSG_UNINSTALL}" \
         "${MSG_MENU_EXIT}"
     
@@ -982,17 +1080,13 @@ main() {
         choice=$?
         
         case $choice in
-            1) do_install ;;
+            1) install_or_update ;;
             2) manage_services ;;
             3)
-                update_nodepass
-                pause
-                ;;
-            4)
                 uninstall_all
                 pause
                 ;;
-            5)
+            4)
                 clear
                 echo -e "${GREEN}${MSG_EXIT}${NC}"
                 exit 0
