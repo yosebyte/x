@@ -28,9 +28,8 @@ show_logo() {
 │  ░░█░█░█░█░█░█░█▀▀░█▀▀░█▀█░▀▀█░▀▀█░░  │
 │  ░░▀░▀░▀▀▀░▀▀░░▀▀▀░▀░░░▀░▀░▀▀▀░▀▀▀░░  │
 ├───────────────────────────────────────┤
-│      github.com/yosebyte/nodepass     │
+│     *github.com/yosebyte/nodepass     │
 ╰───────────────────────────────────────╯
-
 EOF
     echo -e "${NC}"
     
@@ -175,7 +174,7 @@ load_messages() {
         MSG_MIRROR_NO="否，使用原站"
         MSG_SELECT_MODE="请选择安装模式："
         MSG_MODE_CLIENT="客户端模式"
-        MSG_MODE_SERVER="服务器模式"
+        MSG_MODE_SERVER="服务端模式"
         MSG_INPUT_TUNNEL="请输入隧道地址 (格式: IP地址:端口号)："
         MSG_INPUT_TARGET="请输入目标地址 (格式: IP地址:端口号)："
         MSG_DEBUG_MODE="是否启用调试模式？"
@@ -196,7 +195,7 @@ load_messages() {
         MSG_COMPLETE="安装完成！"
         MSG_USAGE="使用方法："
         MSG_CLIENT_USAGE="客户端模式："
-        MSG_SERVER_USAGE="服务器模式："
+        MSG_SERVER_USAGE="服务端模式："
         MSG_SERVICE_USAGE="systemd 服务管理："
         MSG_START_SERVICE="启动服务..."
         MSG_STOP_SERVICE="停止服务..."
@@ -241,8 +240,8 @@ load_messages() {
         MSG_CONFIRM_YES="是，删除服务"
         MSG_CONFIRM_NO="否，取消操作"
         MSG_SERVICE_DELETED="服务已删除。"
-        MSG_TUNNEL_EXPLANATION="隧道地址是NodePass用于建立TLS控制通道的地址。\n服务器模式下：这是服务器监听的地址，例如 0.0.0.0:10101\n客户端模式下：这是连接到服务器的地址，例如 server.example.com:10101"
-        MSG_TARGET_EXPLANATION="目标地址是NodePass用于接收转发业务数据的地址。\n服务器模式下：这是目标业务的外部地址，例如 0.0.0.0:10022\n客户端模式下：这是客户端可以访问的目标业务地址，例如 127.0.0.1:22"
+        MSG_TUNNEL_EXPLANATION="隧道地址是NodePass用于建立TLS控制通道的地址。\n服务端模式下：这是服务端监听的地址，例如 0.0.0.0:10101\n客户端模式下：这是连接到服务端的地址，例如 server:10101"
+        MSG_TARGET_EXPLANATION="目标地址是NodePass用于接收转发业务数据的地址。\n服务端模式下：这是目标业务的外部地址，例如 0.0.0.0:10022\n客户端模式下：这是客户端可以访问的目标业务地址，例如 127.0.0.1:22"
         MSG_SERVICE_NAME_EXPLANATION="服务名称用于标识不同的NodePass服务实例，将作为systemd服务名的一部分（np-服务名）"
         MSG_DEBUG_EXPLANATION="调试模式将显示详细的日志信息，有助于排查问题，但会产生较多日志"
         MSG_CUSTOM_MIRROR_PROMPT="是否使用自定义GitHub镜像？"
@@ -341,8 +340,8 @@ load_messages() {
         MSG_CONFIRM_YES="Yes, delete service"
         MSG_CONFIRM_NO="No, cancel operation"
         MSG_SERVICE_DELETED="Service has been deleted."
-        MSG_TUNNEL_EXPLANATION="Tunnel address is used by NodePass to establish a TLS control channel.\nServer mode: This is where the server listens, e.g., 0.0.0.0:10101\nClient mode: This is where to connect to the server, e.g., server.example.com:10101"
-        MSG_TARGET_EXPLANATION="Target address is where NodePass forwards business data.\nServer mode: This is the external address for target business, e.g., 0.0.0.0:10022\nClient mode: This is the target business address accessible from client, e.g., 127.0.0.1:22"
+        MSG_TUNNEL_EXPLANATION="Tunnel address is used by NodePass to establish a TLS control channel.\nServer mode: This is where the server listens, e.g., 0.0.0.0:10101\nClient mode: This is where to connect to the server, e.g., server:10101"
+        MSG_TARGET_EXPLANATION="Target address is where NodePass forwards target service data.\nServer mode: This is the external address for target service, e.g., 0.0.0.0:10022\nClient mode: This is the target service address accessible from client, e.g., 127.0.0.1:22"
         MSG_SERVICE_NAME_EXPLANATION="Service name is used to identify different NodePass service instances and will be part of the systemd service name (np-servicename)"
         MSG_DEBUG_EXPLANATION="Debug mode shows detailed log information which helps troubleshooting but generates more logs"
         MSG_CUSTOM_MIRROR_PROMPT="Would you like to use a custom GitHub mirror?"
@@ -744,6 +743,7 @@ update_nodepass() {
     # Load existing config
     if [ ! -f "$CONFIG_FILE" ]; then
         echo -e "${RED}${MSG_NOT_INSTALLED}${NC}"
+        pause
         return
     fi
     
@@ -759,6 +759,7 @@ update_nodepass() {
     # Compare versions
     if [ "$CURRENT_VERSION" == "$VERSION" ]; then
         echo -e "${GREEN}${MSG_UPDATE_LATEST}${NC}"
+        pause
         return
     fi
     
