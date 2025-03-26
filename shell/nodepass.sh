@@ -28,7 +28,8 @@ show_logo() {
 │  ░░█░█░█░█░█░█░█▀▀░█▀▀░█▀█░▀▀█░▀▀█░░  │
 │  ░░▀░▀░▀▀▀░▀▀░░▀▀▀░▀░░░▀░▀░▀▀▀░▀▀▀░░  │
 ├───────────────────────────────────────┤
-│     *github.com/yosebyte/nodepass     │
+│      Universal TCP/UDP Tunneling      │
+│ @https://github.com/yosebyte/nodepass │
 ╰───────────────────────────────────────╯
 EOF
     echo -e "${NC}"
@@ -240,8 +241,8 @@ load_messages() {
         MSG_CONFIRM_YES="是，删除服务"
         MSG_CONFIRM_NO="否，取消操作"
         MSG_SERVICE_DELETED="服务已删除。"
-        MSG_TUNNEL_EXPLANATION="隧道地址是NodePass用于建立TLS控制通道的地址。\n服务端模式下：这是服务端监听的地址，例如 0.0.0.0:10101\n客户端模式下：这是连接到服务端的地址，例如 server:10101"
-        MSG_TARGET_EXPLANATION="目标地址是NodePass用于接收转发业务数据的地址。\n服务端模式下：这是目标业务的外部地址，例如 0.0.0.0:10022\n客户端模式下：这是客户端可以访问的目标业务地址，例如 127.0.0.1:22"
+        MSG_TUNNEL_EXPLANATION="隧道地址是NodePass用于建立TLS控制通道的地址。\n服务端模式下：这是服务端监听的地址，例如 0.0.0.0:10101\n客户端模式下：这是连接服务端的地址，例如 server:10101"
+        MSG_TARGET_EXPLANATION="目标地址是NodePass用于接收转发业务数据的地址。\n服务端模式下：这是目标业务外部地址，例如 0.0.0.0:10022\n客户端模式下：这是目标业务内部地址，例如 127.0.0.1:22"
         MSG_SERVICE_NAME_EXPLANATION="服务名称用于标识不同的NodePass服务实例，将作为systemd服务名的一部分（np-服务名）"
         MSG_DEBUG_EXPLANATION="调试模式将显示详细的日志信息，有助于排查问题，但会产生较多日志"
         MSG_CUSTOM_MIRROR_PROMPT="是否使用自定义GitHub镜像？"
@@ -250,7 +251,7 @@ load_messages() {
         MSG_CUSTOM_MIRROR_URL="请输入自定义GitHub镜像URL (如 https://gh-proxy.com/ )："
         MSG_RETRY_DOWNLOAD="正在使用自定义镜像重新下载..."
         MSG_PRESS_ENTER="按回车键继续..."
-        MSG_EXIT="感谢使用 NodePass 管理脚本！"
+        MSG_EXIT="感谢使用 NodePass 管理脚本！STAR并关注项目以获取最新更新。"
         MSG_INVALID_CHOICE="无效选择，请重试。"
         MSG_MENU_CHOICE="请选择一个选项："
         MSG_AVAILABLE_SERVICES="可用服务："
@@ -350,7 +351,7 @@ load_messages() {
         MSG_CUSTOM_MIRROR_URL="Please enter custom GitHub mirror URL (e.g. https://gh-proxy.com/ ):"
         MSG_RETRY_DOWNLOAD="Retrying download with custom mirror..."
         MSG_PRESS_ENTER="Press Enter to continue..."
-        MSG_EXIT="Thank you for using NodePass Management Script!"
+        MSG_EXIT="Thank you for using NodePass Management Script! STAR and watch the project for latest updates."
         MSG_INVALID_CHOICE="Invalid choice, please try again."
         MSG_MENU_CHOICE="Please select an option:"
         MSG_AVAILABLE_SERVICES="Available services:"
@@ -652,7 +653,7 @@ setup_systemd_service() {
     # Create service file
     cat > "$SERVICE_PATH" << EOF
 [Unit]
-Description=NodePass (${SERVICE_NAME}) - Efficient TCP/UDP Tunneling Solution
+Description=NodePass (${SERVICE_NAME}) - Universal TCP/UDP Tunneling
 After=network.target
 
 [Service]
