@@ -63,7 +63,7 @@ check_dependencies() {
         echo -e "${CYAN}${MSG_INSTALL_DEPENDENCIES_PROMPT}${NC}"
         echo -e "1. ${GREEN}${MSG_INSTALL_DEPENDENCIES_YES}${NC}"
         echo -e "2. ${GREEN}${MSG_INSTALL_DEPENDENCIES_NO}${NC}"
-        read -p "$(echo -e ${YELLOW}"Option [1/2]: "${NC})" install_deps_option
+        read -p "$(echo -e ${YELLOW}"[1/2]: "${NC})" install_deps_option
         
         case $install_deps_option in
             1)
@@ -193,7 +193,7 @@ load_messages() {
         MSG_SYSTEMD_SUCCESS="systemd 服务设置成功！"
         MSG_SYSTEMD_ERROR="设置 systemd 失败，请检查系统是否支持 systemd。"
         MSG_SYSTEMD_NOT_FOUND="未检测到 systemd，将仅安装可执行文件。"
-        MSG_COMPLETE="安装完成！"
+        MSG_COMPLETE="安装完成！可前往服务管理菜单添加服务。"
         MSG_USAGE="使用方法："
         MSG_CLIENT_USAGE="客户端模式："
         MSG_SERVER_USAGE="服务端模式："
@@ -217,7 +217,7 @@ load_messages() {
         MSG_MENU_INSTALL="安装 NodePass"
         MSG_MENU_UPDATE="更新 NodePass"
         MSG_MENU_MANAGE="管理 NodePass"
-        MSG_MENU_EXIT="退出脚本"
+        MSG_MENU_EXIT="退出"
         MSG_MISSING_DEPENDENCIES="缺少必需的依赖项："
         MSG_INSTALL_DEPENDENCIES_PROMPT="是否安装缺少的依赖项？"
         MSG_INSTALL_DEPENDENCIES_YES="是，安装依赖项"
@@ -237,9 +237,9 @@ load_messages() {
         MSG_SERVICE_STOP="停止服务"
         MSG_SERVICE_RESTART="重启服务"
         MSG_SERVICE_DELETE="删除服务"
-        MSG_CONFIRM_DELETE="确定要删除此服务吗？"
-        MSG_CONFIRM_YES="是，删除服务"
-        MSG_CONFIRM_NO="否，取消操作"
+        MSG_CONFIRM_DELETE="确定吗？"
+        MSG_CONFIRM_YES="是"
+        MSG_CONFIRM_NO="否"
         MSG_SERVICE_DELETED="服务已删除。"
         MSG_TUNNEL_EXPLANATION="隧道地址是NodePass用于建立TLS控制通道的地址。\n服务端模式下：这是服务端监听的地址，例如 0.0.0.0:10101\n客户端模式下：这是连接服务端的地址，例如 server:10101"
         MSG_TARGET_EXPLANATION="目标地址是NodePass用于接收转发业务数据的地址。\n服务端模式下：这是目标业务外部地址，例如 0.0.0.0:10022\n客户端模式下：这是目标业务内部地址，例如 127.0.0.1:22"
@@ -251,13 +251,12 @@ load_messages() {
         MSG_CUSTOM_MIRROR_URL="请输入自定义GitHub镜像URL (如 https://gh-proxy.com/ )："
         MSG_RETRY_DOWNLOAD="正在使用自定义镜像重新下载..."
         MSG_PRESS_ENTER="按回车键继续..."
-        MSG_EXIT="感谢使用 NodePass 管理脚本！STAR并关注项目以获取最新更新。"
+        MSG_EXIT="STAR并关注项目以获取更新：https://github.com/yosebyte/nodepass"
         MSG_INVALID_CHOICE="无效选择，请重试。"
         MSG_MENU_CHOICE="请选择一个选项："
         MSG_AVAILABLE_SERVICES="可用服务："
         MSG_URL="URL:"
         MSG_DEBUG="调试模式:"
-        MSG_STATUS="状态:"
         MSG_RUNNING="运行中"
         MSG_STOPPED="已停止"
         MSG_UNKNOWN="未知"
@@ -293,7 +292,7 @@ load_messages() {
         MSG_SYSTEMD_SUCCESS="systemd service setup successful!"
         MSG_SYSTEMD_ERROR="Failed to setup systemd, please check if your system supports systemd."
         MSG_SYSTEMD_NOT_FOUND="systemd not detected, will only install executable."
-        MSG_COMPLETE="Installation complete!"
+        MSG_COMPLETE="Installation complete! Proceed to service management menu to add services."
         MSG_USAGE="Usage:"
         MSG_CLIENT_USAGE="Client mode:"
         MSG_SERVER_USAGE="Server mode:"
@@ -317,7 +316,7 @@ load_messages() {
         MSG_MENU_INSTALL="Install NodePass"
         MSG_MENU_UPDATE="Update NodePass"
         MSG_MENU_MANAGE="Manage NodePass"
-        MSG_MENU_EXIT="Exit Script"
+        MSG_MENU_EXIT="Exit"
         MSG_MISSING_DEPENDENCIES="Missing required dependencies:"
         MSG_INSTALL_DEPENDENCIES_PROMPT="Install missing dependencies?"
         MSG_INSTALL_DEPENDENCIES_YES="Yes, install dependencies"
@@ -337,9 +336,9 @@ load_messages() {
         MSG_SERVICE_STOP="Stop service"
         MSG_SERVICE_RESTART="Restart service"
         MSG_SERVICE_DELETE="Delete service"
-        MSG_CONFIRM_DELETE="Are you sure you want to delete this service?"
-        MSG_CONFIRM_YES="Yes, delete service"
-        MSG_CONFIRM_NO="No, cancel operation"
+        MSG_CONFIRM_DELETE="Are you sure?"
+        MSG_CONFIRM_YES="Yes"
+        MSG_CONFIRM_NO="No"
         MSG_SERVICE_DELETED="Service has been deleted."
         MSG_TUNNEL_EXPLANATION="Tunnel address is used by NodePass to establish a TLS control channel.\nServer mode: This is where the server listens, e.g., 0.0.0.0:10101\nClient mode: This is where to connect to the server, e.g., server:10101"
         MSG_TARGET_EXPLANATION="Target address is where NodePass forwards target service data.\nServer mode: This is the external address for target service, e.g., 0.0.0.0:10022\nClient mode: This is the target service address accessible from client, e.g., 127.0.0.1:22"
@@ -351,13 +350,12 @@ load_messages() {
         MSG_CUSTOM_MIRROR_URL="Please enter custom GitHub mirror URL (e.g. https://gh-proxy.com/ ):"
         MSG_RETRY_DOWNLOAD="Retrying download with custom mirror..."
         MSG_PRESS_ENTER="Press Enter to continue..."
-        MSG_EXIT="Thank you for using NodePass Management Script! STAR and watch the project for latest updates."
+        MSG_EXIT="STAR and watch the project for updates. https://github.com/yosebyte/nodepass"
         MSG_INVALID_CHOICE="Invalid choice, please try again."
         MSG_MENU_CHOICE="Please select an option:"
         MSG_AVAILABLE_SERVICES="Available services:"
         MSG_URL="URL:"
         MSG_DEBUG="Debug:"
-        MSG_STATUS="Status:"
         MSG_RUNNING="Running"
         MSG_STOPPED="Stopped"
         MSG_UNKNOWN="Unknown"
@@ -405,7 +403,7 @@ get_user_choice() {
         done
         
         # Get user input
-        read -p "$(echo -e ${YELLOW}"Option [1-${#options[@]}]: "${NC})" choice
+        read -p "$(echo -e ${YELLOW}"[1-${#options[@]}]: "${NC})" choice
         
         # Validate input
         if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "${#options[@]}" ]; then
@@ -821,24 +819,10 @@ do_install() {
     detect_arch
     get_latest_version
     ask_mirror
-    ask_service_name
-    ask_mode
-    ask_addresses
-    ask_debug
-    
     download_and_install
     init_config
-    add_service
-    
-    # Set up systemd service if available, otherwise prompt user
-    if command -v systemctl &> /dev/null; then
-        setup_systemd_service
-    else
-        echo -e "${YELLOW}${MSG_SYSTEMD_NOT_FOUND}${NC}"
-    fi
     
     echo -e "\n${GREEN}${MSG_COMPLETE}${NC}\n"
-    show_service_usage "$SERVICE_NAME"
     pause
 }
 
@@ -868,9 +852,9 @@ show_service_menu() {
         local debug=$(jq -r .debug_mode "$SERVICE_CONFIG")
         
         # Show debug as Yes/No
-        local debug_display="No"
+        local debug_display="no"
         if [ "$debug" == "true" ]; then
-            debug_display="Yes"
+            debug_display="yes"
         fi
         
         echo -e "${PURPLE}${MSG_SERVICE_MENU}: ${GREEN}np-${service_name}${NC}\n"
@@ -917,6 +901,13 @@ show_service_menu() {
 
 # Manage services
 manage_services() {
+    # Check if nodepass is installed
+    if [ ! -f "$NODEPASS_PATH" ]; then
+        echo -e "${RED}${MSG_NOT_INSTALLED}${NC}"
+        pause
+        return
+    fi
+
     while true; do
         clear
         show_logo
@@ -971,7 +962,7 @@ manage_services() {
                     status="${RED}${MSG_STOPPED}${NC}"
                 fi
                 
-                echo -e "$((i+1)). ${GREEN}np-${name}${NC} - ${CYAN}${mode}://${tunnel}/${target}${NC} - ${MSG_STATUS} ${status}"
+                echo -e "$((i+1)). ${GREEN}np-${name}${NC} | ${CYAN}${mode}://${tunnel}/${target}${NC} | ${status}"
             done
             
             echo
@@ -1019,14 +1010,19 @@ manage_services() {
 
 # Uninstall everything
 uninstall_all() {
-    echo -e "${CYAN}${MSG_UNINSTALL}${NC}"
-    
     # Check if nodepass is installed
     if [ ! -f "$NODEPASS_PATH" ]; then
         echo -e "${RED}${MSG_NOT_INSTALLED}${NC}"
         return
     fi
     
+    # Ask for confirmation
+    get_user_choice "${MSG_CONFIRM_DELETE}" "${MSG_CONFIRM_YES}" "${MSG_CONFIRM_NO}"
+    local confirm=$?
+    if [ "$confirm" -eq 2 ]; then
+        return
+    fi
+
     # Stop and disable all services
     if [ -f "$CONFIG_FILE" ]; then
         local services=($(jq -r '.services[]' "$CONFIG_FILE"))
