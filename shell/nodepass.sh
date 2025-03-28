@@ -254,12 +254,14 @@ load_messages() {
         MSG_EXIT="STAR并关注项目以获取更新：https://github.com/yosebyte/nodepass"
         MSG_INVALID_CHOICE="无效选择，请重试。"
         MSG_MENU_CHOICE="请选择一个选项："
-        MSG_AVAILABLE_SERVICES="可用服务："
-        MSG_URL="URL:"
+        MSG_AVAILABLE_SERVICES="可用服务，选中管理："
+        MSG_URL="运行命令:"
         MSG_DEBUG="调试模式:"
         MSG_RUNNING="运行中"
         MSG_STOPPED="已停止"
         MSG_UNKNOWN="未知"
+        MSG_INPUT_REQUIRED="输入不能为空，请重试。"
+        MSG_EXAMPLE="示例："
     else
         MSG_WELCOME="Welcome to NodePass Management Script!"
         MSG_ROOT="Root privileges are required to complete this operation."
@@ -353,12 +355,14 @@ load_messages() {
         MSG_EXIT="STAR and watch the project for updates. https://github.com/yosebyte/nodepass"
         MSG_INVALID_CHOICE="Invalid choice, please try again."
         MSG_MENU_CHOICE="Please select an option:"
-        MSG_AVAILABLE_SERVICES="Available services:"
-        MSG_URL="URL:"
+        MSG_AVAILABLE_SERVICES="Available services, select to manage:"
+        MSG_URL="Command:"
         MSG_DEBUG="Debug:"
         MSG_RUNNING="Running"
         MSG_STOPPED="Stopped"
         MSG_UNKNOWN="Unknown"
+        MSG_INPUT_REQUIRED="Input required, please try again."
+        MSG_EXAMPLE="Example:"
     fi
 }
 
@@ -374,7 +378,7 @@ get_user_input() {
     fi
     
     if [ -n "$example" ]; then
-        echo -e "${YELLOW}Example: ${example}${NC}"
+        echo -e "${YELLOW}${MSG_EXAMPLE} ${example}${NC}"
     fi
     
     while true; do
@@ -383,7 +387,7 @@ get_user_input() {
             eval "$variable_name='$input'"
             break
         fi
-        echo -e "${RED}Input required, please try again.${NC}"
+        echo -e "${RED}${MSG_INPUT_REQUIRED}${NC}"
     done
 }
 
