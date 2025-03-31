@@ -266,6 +266,8 @@ func (p *Pool) Flush() {
 	})
 	wg.Wait()
 	p.conns = sync.Map{}
+	p.idChan = make(chan string, p.maxCap)
+	p.capacity = p.minCap
 }
 
 func (p *Pool) Close() {
