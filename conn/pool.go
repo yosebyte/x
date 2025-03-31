@@ -252,10 +252,9 @@ func (p *Pool) ServerGet() (string, net.Conn) {
 	}
 }
 
-func (p *Pool) Close() {
-	if p.cancel != nil {
-		p.cancel()
-	}
+func (p *Pool) Flush() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	var wg sync.WaitGroup
 	p.conns.Range(func(key, value any) bool {
 		wg.Add(1)
@@ -266,6 +265,14 @@ func (p *Pool) Close() {
 		return true
 	})
 	wg.Wait()
+	p.conns = sync.Map{}
+}
+
+func (p *Pool) Close() {
+	if p.cancel != nil {
+		p.cancel()
+	}
+	p.Flush()
 }
 
 func (p *Pool) Ready() bool {
