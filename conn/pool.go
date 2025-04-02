@@ -3,6 +3,7 @@ package conn
 import (
 	"context"
 	"crypto/rand"
+	"crypto/tls"
 	"encoding/hex"
 	"net"
 	"sync"
@@ -10,19 +11,21 @@ import (
 )
 
 type Pool struct {
-	mu       sync.Mutex
-	conns    sync.Map
-	idChan   chan string
-	dialer   func() (net.Conn, error)
-	listener net.Listener
-	capacity int
-	minCap   int
-	maxCap   int
-	interval time.Duration
-	minIvl   time.Duration
-	maxIvl   time.Duration
-	ctx      context.Context
-	cancel   context.CancelFunc
+	mu        sync.Mutex
+	conns     sync.Map
+	idChan    chan string
+	tlsLevel  string
+	tlsConfig *tls.Config
+	dialer    func() (net.Conn, error)
+	listener  net.Listener
+	capacity  int
+	minCap    int
+	maxCap    int
+	interval  time.Duration
+	minIvl    time.Duration
+	maxIvl    time.Duration
+	ctx       context.Context
+	cancel    context.CancelFunc
 }
 
 func NewBrokerPool(minCap, maxCap int, minIvl, maxIvl time.Duration, dialer func() (net.Conn, error)) *Pool {
@@ -57,7 +60,7 @@ func NewBrokerPool(minCap, maxCap int, minIvl, maxIvl time.Duration, dialer func
 	}
 }
 
-func NewClientPool(minCap, maxCap int, dialer func() (net.Conn, error)) *Pool {
+func NewClientPool(minCap, maxCap int, tlsLevel string, dialer func() (net.Conn, error)) *Pool {
 	if minCap <= 0 {
 		minCap = 1
 	}
@@ -70,6 +73,7 @@ func NewClientPool(minCap, maxCap int, dialer func() (net.Conn, error)) *Pool {
 	return &Pool{
 		conns:    sync.Map{},
 		idChan:   make(chan string, maxCap),
+		tlsLevel: tlsLevel,
 		dialer:   dialer,
 		capacity: minCap,
 		minCap:   minCap,
@@ -78,7 +82,7 @@ func NewClientPool(minCap, maxCap int, dialer func() (net.Conn, error)) *Pool {
 	}
 }
 
-func NewServerPool(maxCap int, listener net.Listener) *Pool {
+func NewServerPool(maxCap int, tlsConfig *tls.Config, listener net.Listener) *Pool {
 	if maxCap <= 0 {
 		maxCap = 1
 	}
@@ -86,9 +90,10 @@ func NewServerPool(maxCap int, listener net.Listener) *Pool {
 		return nil
 	}
 	return &Pool{
-		conns:    sync.Map{},
-		idChan:   make(chan string, maxCap),
-		listener: listener,
+		conns:     sync.Map{},
+		idChan:    make(chan string, maxCap),
+		tlsConfig: tlsConfig,
+		listener:  listener,
 	}
 }
 
@@ -150,6 +155,29 @@ func (p *Pool) ClientManager() {
 				if err != nil {
 					continue
 				}
+				switch p.tlsLevel {
+				case "0":
+				case "1":
+					tlsConn := tls.Client(conn, &tls.Config{
+						InsecureSkipVerify: true,
+					})
+					err := tlsConn.Handshake()
+					if err != nil {
+						conn.Close()
+						continue
+					}
+					conn = tlsConn
+				case "2":
+					tlsConn := tls.Client(conn, &tls.Config{
+						InsecureSkipVerify: false,
+					})
+					err := tlsConn.Handshake()
+					if err != nil {
+						conn.Close()
+						continue
+					}
+					conn = tlsConn
+				}
 				buf := make([]byte, 8)
 				n, err := conn.Read(buf)
 				if err != nil || n != 8 {
@@ -185,6 +213,15 @@ func (p *Pool) ServerManager() {
 			conn, err := p.listener.Accept()
 			if err != nil {
 				continue
+			}
+			if p.tlsConfig != nil {
+				tlsConn := tls.Server(conn, p.tlsConfig)
+				err := tlsConn.Handshake()
+				if err != nil {
+					conn.Close()
+					continue
+				}
+				conn = tlsConn
 			}
 			id := p.getID()
 			_, err = conn.Write([]byte(id))
@@ -267,7 +304,6 @@ func (p *Pool) Flush() {
 	wg.Wait()
 	p.conns = sync.Map{}
 	p.idChan = make(chan string, p.maxCap)
-	p.capacity = p.minCap
 }
 
 func (p *Pool) Close() {
