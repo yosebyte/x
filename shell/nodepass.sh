@@ -564,7 +564,7 @@ ask_tls_mode() {
             get_user_input "${MSG_INPUT_KEY_PATH}" KEY_PATH
             
             # Update TLS query with cert and key paths
-            TLS_QUERY="?tls=2&cert=${CERT_PATH}&key=${KEY_PATH}"
+            TLS_QUERY="?tls=2&crt=${CERT_PATH}&key=${KEY_PATH}"
             ;;
     esac
     
@@ -747,7 +747,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=$NODEPASS_PATH "${S_MODE}://${S_TUNNEL}/${S_TARGET}${QUERY_PARAM}"
+ExecStart=$NODEPASS_PATH ${S_MODE}://${S_TUNNEL}/${S_TARGET}${QUERY_PARAM}
 Restart=on-failure
 RestartSec=5s
 
