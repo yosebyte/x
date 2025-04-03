@@ -606,19 +606,21 @@ ask_service_name() {
 # Initialize config directory and file
 init_config() {
     mkdir -p "${CONFIG_DIR}/services"
-    
+
     if [ ! -f "$CONFIG_FILE" ]; then
         # Create initial config file
-        echo "{\"global\":{\"version\":\"${VERSION}\",\"use_mirror\":${USE_MIRROR},\"mirror_url\":\"${MIRROR_URL}\"},\"services\":[]}" > "$CONFIG_FILE"
+        echo "{\"global\":{\"version\":\"${VERSION}\",\"use_mirror\":${USE_MIRROR:-false},\"mirror_url\":\"${MIRROR_URL}\"},\"services\":[]}" > "$CONFIG_FILE"
     else
-    
-        # Update global config
-        jq ".global.version = \"${VERSION}\" | .global.use_mirror = ${USE_MIRROR} | .global.mirror_url = \"${MIRROR_URL}\"" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp"
+        # Update global config using --arg and --argjson to ensure proper quoting
+        jq --arg ver "$VERSION" \
+           --arg mirror "$MIRROR_URL" \
+           --argjson use_mirror "${USE_MIRROR:-false}" \
+           '.global.version = $ver | .global.use_mirror = $use_mirror | .global.mirror_url = $mirror' \
+           "$CONFIG_FILE" > "${CONFIG_FILE}.tmp"
         if [ $? -ne 0 ]; then
             exit 1
         fi
         mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-    
     fi
 }
 
