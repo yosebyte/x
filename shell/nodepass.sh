@@ -176,8 +176,8 @@ load_messages() {
         MSG_SELECT_MODE="请选择安装模式："
         MSG_MODE_CLIENT="客户端模式"
         MSG_MODE_SERVER="服务端模式"
-        MSG_INPUT_TUNNEL="请输入隧道地址 (格式: IP地址:端口号)："
-        MSG_INPUT_TARGET="请输入目标地址 (格式: IP地址:端口号)："
+        MSG_INPUT_TUNNEL="请输入隧道地址 (格式: 域名或IP:端口号)："
+        MSG_INPUT_TARGET="请输入目标地址 (格式: 域名或IP:端口号)："
         MSG_DEBUG_MODE="是否启用调试模式？"
         MSG_DEBUG_YES="是，启用调试模式"
         MSG_DEBUG_NO="否，使用默认日志级别"
@@ -241,8 +241,8 @@ load_messages() {
         MSG_CONFIRM_YES="是"
         MSG_CONFIRM_NO="否"
         MSG_SERVICE_DELETED="服务已删除。"
-        MSG_TUNNEL_EXPLANATION="隧道地址是NodePass用于建立TLS控制通道的地址。\n服务端模式下：这是服务端监听的地址，例如 0.0.0.0:10101\n客户端模式下：这是连接服务端的地址，例如 server:10101"
-        MSG_TARGET_EXPLANATION="目标地址是NodePass用于接收转发业务数据的地址。\n服务端模式下：这是目标业务外部地址，例如 0.0.0.0:10022\n客户端模式下：这是目标业务内部地址，例如 127.0.0.1:22"
+        MSG_TUNNEL_EXPLANATION="隧道地址是NodePass用于建立TCP控制通道的地址。\n服务端模式下：这是服务端监听的地址，例如 :10101\n客户端模式下：这是连接服务端的地址，例如 server:10101"
+        MSG_TARGET_EXPLANATION="目标地址是NodePass用于接收转发业务数据的地址。\n服务端模式下：这是目标业务外部地址，例如 :10022\n客户端模式下：这是目标业务内部地址，例如 127.0.0.1:22"
         MSG_SERVICE_NAME_EXPLANATION="服务名称用于标识不同的NodePass服务实例，将作为systemd服务名的一部分（np-服务名）"
         MSG_DEBUG_EXPLANATION="调试模式将显示详细的日志信息，有助于排查问题，但会产生较多日志"
         MSG_CUSTOM_MIRROR_PROMPT="是否使用自定义GitHub镜像？"
@@ -286,8 +286,8 @@ load_messages() {
         MSG_SELECT_MODE="Please select installation mode:"
         MSG_MODE_CLIENT="Client mode"
         MSG_MODE_SERVER="Server mode"
-        MSG_INPUT_TUNNEL="Please enter tunnel address (format: IP:port):"
-        MSG_INPUT_TARGET="Please enter target address (format: IP:port):"
+        MSG_INPUT_TUNNEL="Please enter tunnel address (format: domain or IP:port):"
+        MSG_INPUT_TARGET="Please enter target address (format: domain or IP:port):"
         MSG_DEBUG_MODE="Enable debug mode?"
         MSG_DEBUG_YES="Yes, enable debug mode"
         MSG_DEBUG_NO="No, use default log level"
@@ -351,8 +351,8 @@ load_messages() {
         MSG_CONFIRM_YES="Yes"
         MSG_CONFIRM_NO="No"
         MSG_SERVICE_DELETED="Service has been deleted."
-        MSG_TUNNEL_EXPLANATION="Tunnel address is used by NodePass to establish a TLS control channel.\nServer mode: This is where the server listens, e.g., 0.0.0.0:10101\nClient mode: This is where to connect to the server, e.g., server:10101"
-        MSG_TARGET_EXPLANATION="Target address is where NodePass forwards target service data.\nServer mode: This is the external address for target service, e.g., 0.0.0.0:10022\nClient mode: This is the target service address accessible from client, e.g., 127.0.0.1:22"
+        MSG_TUNNEL_EXPLANATION="Tunnel address is used by NodePass to establish a TCP control channel.\nServer mode: This is where the server listens, e.g., :10101\nClient mode: This is where to connect to the server, e.g., server:10101"
+        MSG_TARGET_EXPLANATION="Target address is where NodePass forwards target service data.\nServer mode: This is the external address for target service, e.g., :10022\nClient mode: This is the target service address accessible from client, e.g., 127.0.0.1:22"
         MSG_SERVICE_NAME_EXPLANATION="Service name is used to identify different NodePass service instances and will be part of the systemd service name (np-servicename)"
         MSG_DEBUG_EXPLANATION="Debug mode shows detailed log information which helps troubleshooting but generates more logs"
         MSG_CUSTOM_MIRROR_PROMPT="Would you like to use a custom GitHub mirror?"
@@ -817,8 +817,11 @@ delete_service() {
     rm -f "${SERVICE_DIR}/np-${service_name}.service"
     rm -f "${CONFIG_DIR}/services/${service_name}.json"
     
-    # Update config file
-    jq ".services -= [\"${service_name}\"]" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp"
+    # Extract global config to preserve it
+    local global_config=$(jq '.global' "$CONFIG_FILE")
+    
+    # Update config file while preserving the global section
+    jq --argjson global "$global_config" '.services -= ["'"${service_name}"'"] | .global = $global' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp"
     mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
     
     systemctl daemon-reload
