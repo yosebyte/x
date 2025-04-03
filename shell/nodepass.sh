@@ -611,9 +611,14 @@ init_config() {
         # Create initial config file
         echo "{\"global\":{\"version\":\"${VERSION}\",\"use_mirror\":${USE_MIRROR},\"mirror_url\":\"${MIRROR_URL}\"},\"services\":[]}" > "$CONFIG_FILE"
     else
+    
         # Update global config
         jq ".global.version = \"${VERSION}\" | .global.use_mirror = ${USE_MIRROR} | .global.mirror_url = \"${MIRROR_URL}\"" "$CONFIG_FILE" > "${CONFIG_FILE}.tmp"
+        if [ $? -ne 0 ]; then
+            exit 1
+        fi
         mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+    
     fi
 }
 
