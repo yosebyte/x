@@ -14,7 +14,8 @@ type Pool struct {
 	mu        sync.Mutex
 	conns     sync.Map
 	idChan    chan string
-	tlsLevel  string
+	tlsCode   string
+	hostname  string
 	tlsConfig *tls.Config
 	dialer    func() (net.Conn, error)
 	listener  net.Listener
@@ -60,7 +61,7 @@ func NewBrokerPool(minCap, maxCap int, minIvl, maxIvl time.Duration, dialer func
 	}
 }
 
-func NewClientPool(minCap, maxCap int, tlsLevel string, dialer func() (net.Conn, error)) *Pool {
+func NewClientPool(minCap, maxCap int, tlsCode string, hostname string, dialer func() (net.Conn, error)) *Pool {
 	if minCap <= 0 {
 		minCap = 1
 	}
@@ -73,7 +74,8 @@ func NewClientPool(minCap, maxCap int, tlsLevel string, dialer func() (net.Conn,
 	return &Pool{
 		conns:    sync.Map{},
 		idChan:   make(chan string, maxCap),
-		tlsLevel: tlsLevel,
+		tlsCode:  tlsCode,
+		hostname: hostname,
 		dialer:   dialer,
 		capacity: minCap,
 		minCap:   minCap,
@@ -155,7 +157,7 @@ func (p *Pool) ClientManager() {
 				if err != nil {
 					continue
 				}
-				switch p.tlsLevel {
+				switch p.tlsCode {
 				case "0":
 				case "1":
 					tlsConn := tls.Client(conn, &tls.Config{
@@ -170,6 +172,7 @@ func (p *Pool) ClientManager() {
 				case "2":
 					tlsConn := tls.Client(conn, &tls.Config{
 						InsecureSkipVerify: false,
+						ServerName:         p.hostname,
 					})
 					err := tlsConn.Handshake()
 					if err != nil {
