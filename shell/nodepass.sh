@@ -747,7 +747,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=$NODEPASS_PATH ${S_MODE}://${S_TUNNEL}/${S_TARGET}${QUERY_PARAM}
+ExecStart=$NODEPASS_PATH "${S_MODE}://${S_TUNNEL}/${S_TARGET}${QUERY_PARAM}"
 Restart=on-failure
 RestartSec=5s
 
