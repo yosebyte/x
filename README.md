@@ -88,13 +88,14 @@ fmt.Printf("Active connections: %d, Capacity: %d\n", pool.Active(), pool.Capacit
 
 ##### ClientPool
 
-Manages outbound client connections with automatic scaling based on usage patterns.
+Manages outbound client connections with automatic scaling based on usage patterns and TLS support.
 
 ```go
 // Create a client pool
 clientPool := conn.NewClientPool(
     3,                  // minimum capacity
     10,                 // maximum capacity
+    "0",                // TLS code: "0" = no TLS, "1" = insecure TLS, "2" = secure TLS
     func() (net.Conn, error) {
         return net.Dial("tcp", "api.example.com:443")
     },
@@ -109,7 +110,7 @@ conn := clientPool.ClientGet("connection-id")
 
 ##### ServerPool
 
-Handles incoming server connections with built-in acceptance limiting.
+Handles incoming server connections with built-in acceptance limiting and TLS support.
 
 ```go
 // Create a TCP listener
@@ -118,8 +119,12 @@ if err != nil {
     log.Fatal(err)
 }
 
-// Create a server pool
-serverPool := conn.NewServerPool(100, listener) // max 100 connections
+// Create a server pool with TLS support
+serverPool := conn.NewServerPool(
+    100,                // max 100 connections
+    tlsConfig,          // TLS configuration (can be nil for non-TLS)
+    listener,           // network listener
+)
 
 // Start the server manager
 go serverPool.ServerManager()
@@ -142,7 +147,13 @@ capacity := pool.Capacity()
 // Get the current interval between connection attempts (BrokerPool only)
 interval := pool.Interval()
 
-// Close all connections in the pool
+// Check if the pool is ready and initialized
+isReady := pool.Ready()
+
+// Remove all connections in the pool but keep the pool active
+pool.Flush()
+
+// Close all connections in the pool and stop the manager
 pool.Close()
 ```
 
