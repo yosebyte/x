@@ -262,6 +262,15 @@ load_messages() {
         MSG_UNKNOWN="未知"
         MSG_INPUT_REQUIRED="输入不能为空，请重试。"
         MSG_EXAMPLE="示例："
+        MSG_SELECT_TLS_MODE="请选择TLS模式："
+        MSG_TLS_MODE_0="不使用TLS（默认）"
+        MSG_TLS_MODE_1="自动TLS（内存自签证书）"
+        MSG_TLS_MODE_2="自定义TLS（提供证书和密钥）"
+        MSG_INPUT_CERT_PATH="请输入证书文件路径："
+        MSG_INPUT_KEY_PATH="请输入密钥文件路径："
+        MSG_CERT_PATH_EXPLANATION="TLS证书文件的完整路径（例如 /path/to/cert.pem）"
+        MSG_KEY_PATH_EXPLANATION="TLS私钥文件的完整路径（例如 /path/to/key.pem）"
+        MSG_TLS_MODE="TLS模式："
     else
         MSG_WELCOME="Welcome to NodePass Management Script!"
         MSG_ROOT="Root privileges are required to complete this operation."
@@ -363,6 +372,15 @@ load_messages() {
         MSG_UNKNOWN="Unknown"
         MSG_INPUT_REQUIRED="Input required, please try again."
         MSG_EXAMPLE="Example:"
+        MSG_SELECT_TLS_MODE="Please select TLS mode:"
+        MSG_TLS_MODE_0="No TLS (default)"
+        MSG_TLS_MODE_1="Auto TLS (Self-signed cert in memory)"
+        MSG_TLS_MODE_2="Custom TLS (provide cert and key)"
+        MSG_INPUT_CERT_PATH="Please enter certificate file path:"
+        MSG_INPUT_KEY_PATH="Please enter key file path:"
+        MSG_CERT_PATH_EXPLANATION="Full path to your TLS certificate file (e.g. /path/to/cert.pem)"
+        MSG_KEY_PATH_EXPLANATION="Full path to your TLS private key file (e.g. /path/to/key.pem)"
+        MSG_TLS_MODE="TLS Mode:"
     fi
 }
 
@@ -510,6 +528,57 @@ ask_debug() {
     esac
 }
 
+# Ask for TLS mode (only for server mode)
+ask_tls_mode() {
+    # Only applicable for server mode
+    if [ "$MODE" != "server" ]; then
+        TLS_MODE=0
+        TLS_QUERY=""
+        return
+    fi
+    
+    get_user_choice "${MSG_SELECT_TLS_MODE}" "${MSG_TLS_MODE_0}" "${MSG_TLS_MODE_1}" "${MSG_TLS_MODE_2}"
+    local tls_option=$?
+    
+    case $tls_option in
+        1)
+            TLS_MODE=0
+            TLS_QUERY=""
+            CERT_PATH=""
+            KEY_PATH=""
+            ;;
+        2)
+            TLS_MODE=1
+            TLS_QUERY="?tls=1"
+            CERT_PATH=""
+            KEY_PATH=""
+            ;;
+        3)
+            TLS_MODE=2
+            
+            # Ask for cert and key file paths
+            echo -e "${CYAN}${MSG_CERT_PATH_EXPLANATION}${NC}"
+            get_user_input "${MSG_INPUT_CERT_PATH}" CERT_PATH
+            
+            echo -e "${CYAN}${MSG_KEY_PATH_EXPLANATION}${NC}"
+            get_user_input "${MSG_INPUT_KEY_PATH}" KEY_PATH
+            
+            # Update TLS query with cert and key paths
+            TLS_QUERY="?tls=2&cert=${CERT_PATH}&key=${KEY_PATH}"
+            ;;
+    esac
+    
+    # Combine with debug param if needed
+    if [ "$DEBUG_MODE" = true ]; then
+        if [ -n "$TLS_QUERY" ]; then
+            TLS_QUERY="${TLS_QUERY}&log=debug"
+            DEBUG_PARAM=""
+        else
+            DEBUG_PARAM="?log=debug"
+        fi
+    fi
+}
+
 # Ask for tunnel and target addresses
 ask_addresses() {
     echo -e "${CYAN}${MSG_TUNNEL_EXPLANATION}${NC}"
@@ -553,13 +622,24 @@ add_service() {
     # Create service config file
     local SERVICE_CONFIG="${CONFIG_DIR}/services/${SERVICE_NAME}.json"
     
+    local tls_config="{}"
+    if [ "$MODE" == "server" ]; then
+        tls_config="{
+            \"tls_mode\": ${TLS_MODE},
+            \"cert_path\": \"${CERT_PATH:-}\",
+            \"key_path\": \"${KEY_PATH:-}\"
+        }"
+    fi
+    
     echo "{
         \"name\": \"${SERVICE_NAME}\",
         \"mode\": \"${MODE}\",
         \"tunnel_addr\": \"${TUNNEL_ADDR}\",
         \"target_addr\": \"${TARGET_ADDR}\",
         \"debug_mode\": ${DEBUG_MODE},
-        \"debug_param\": \"${DEBUG_PARAM}\"
+        \"debug_param\": \"${DEBUG_PARAM}\",
+        \"tls_query\": \"${TLS_QUERY}\",
+        \"tls\": ${tls_config}
     }" > "$SERVICE_CONFIG"
     
     # Update main config file
@@ -650,7 +730,14 @@ setup_systemd_service() {
     local S_MODE=$(jq -r .mode "$SERVICE_CONFIG")
     local S_TUNNEL=$(jq -r .tunnel_addr "$SERVICE_CONFIG")
     local S_TARGET=$(jq -r .target_addr "$SERVICE_CONFIG")
-    local S_DEBUG=$(jq -r .debug_param "$SERVICE_CONFIG")
+    
+    # Determine which query parameter to use (TLS or debug)
+    local QUERY_PARAM=""
+    if [ -n "$(jq -r .tls_query "$SERVICE_CONFIG")" ]; then
+        QUERY_PARAM=$(jq -r .tls_query "$SERVICE_CONFIG")
+    else
+        QUERY_PARAM=$(jq -r .debug_param "$SERVICE_CONFIG")
+    fi
     
     # Create service file
     cat > "$SERVICE_PATH" << EOF
@@ -660,7 +747,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=$NODEPASS_PATH ${S_MODE}://${S_TUNNEL}/${S_TARGET}${S_DEBUG}
+ExecStart=$NODEPASS_PATH ${S_MODE}://${S_TUNNEL}/${S_TARGET}${QUERY_PARAM}
 Restart=on-failure
 RestartSec=5s
 
@@ -841,7 +928,7 @@ install_or_update() {
     fi
 }
 
-# Service menu
+# Show service menu - updated to display TLS information
 show_service_menu() {
     local service_name="$1"
     local SERVICE_CONFIG="${CONFIG_DIR}/services/${service_name}.json"
@@ -863,6 +950,21 @@ show_service_menu() {
         
         echo -e "${PURPLE}${MSG_SERVICE_MENU}: ${GREEN}np-${service_name}${NC}\n"
         echo -e "${CYAN}${MSG_URL} ${NC}${mode}://${tunnel}/${target}"
+        
+        # Display TLS mode information for server mode
+        if [ "$mode" == "server" ]; then
+            local tls_mode=$(jq -r .tls.tls_mode "$SERVICE_CONFIG")
+            echo -e "${CYAN}${MSG_TLS_MODE} ${NC}${tls_mode}"
+            
+            # Show cert and key paths if custom TLS
+            if [ "$tls_mode" -eq 2 ]; then
+                local cert_path=$(jq -r .tls.cert_path "$SERVICE_CONFIG")
+                local key_path=$(jq -r .tls.key_path "$SERVICE_CONFIG")
+                echo -e "${CYAN}Cert: ${NC}${cert_path}"
+                echo -e "${CYAN}Key: ${NC}${key_path}"
+            fi
+        fi
+        
         echo -e "${CYAN}${MSG_DEBUG} ${NC}${debug_display}\n"
         
         get_user_choice "${MSG_MENU_CHOICE}" \
@@ -929,6 +1031,9 @@ manage_services() {
             if [ $choice -eq 1 ]; then
                 ask_service_name
                 ask_mode
+                if [ "$MODE" == "server" ]; then
+                    ask_tls_mode
+                fi
                 ask_addresses
                 ask_debug
                 
@@ -989,6 +1094,9 @@ manage_services() {
                 # Add new service
                 ask_service_name
                 ask_mode
+                if [ "$MODE" == "server" ]; then
+                    ask_tls_mode
+                fi
                 ask_addresses
                 ask_debug
                 
