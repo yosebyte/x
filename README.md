@@ -95,7 +95,10 @@ Manages outbound client connections with automatic scaling based on usage patter
 clientPool := conn.NewClientPool(
     3,                  // minimum capacity
     10,                 // maximum capacity
-    "0",                // TLS code: "0" = no TLS, "1" = insecure TLS, "2" = secure TLS
+    time.Second,        // minimum interval
+    time.Minute,        // maximum interval
+    "1",                // TLS code: "0" = no TLS, "1" = insecure TLS, "2" = secure TLS with hostname verification
+    "example.com",      // hostname for verification (used with TLS code "2")
     func() (net.Conn, error) {
         return net.Dial("tcp", "api.example.com:443")
     },

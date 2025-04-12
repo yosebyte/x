@@ -61,7 +61,7 @@ func NewBrokerPool(minCap, maxCap int, minIvl, maxIvl time.Duration, dialer func
 	}
 }
 
-func NewClientPool(minCap, maxCap int, tlsCode string, hostname string, dialer func() (net.Conn, error)) *Pool {
+func NewClientPool(minCap, maxCap int, minIvl, maxIvl time.Duration, tlsCode string, hostname string, dialer func() (net.Conn, error)) *Pool {
 	if minCap <= 0 {
 		minCap = 1
 	}
@@ -70,6 +70,15 @@ func NewClientPool(minCap, maxCap int, tlsCode string, hostname string, dialer f
 	}
 	if minCap > maxCap {
 		minCap, maxCap = maxCap, minCap
+	}
+	if minIvl <= 0 {
+		minIvl = time.Second
+	}
+	if maxIvl <= 0 {
+		maxIvl = time.Second
+	}
+	if minIvl > maxIvl {
+		minIvl, maxIvl = maxIvl, minIvl
 	}
 	return &Pool{
 		conns:    sync.Map{},
@@ -80,7 +89,9 @@ func NewClientPool(minCap, maxCap int, tlsCode string, hostname string, dialer f
 		capacity: minCap,
 		minCap:   minCap,
 		maxCap:   maxCap,
-		interval: time.Second,
+		interval: minIvl,
+		minIvl:   minIvl,
+		maxIvl:   maxIvl,
 	}
 }
 
@@ -151,6 +162,7 @@ func (p *Pool) ClientManager() {
 			if !mu.TryLock() {
 				continue
 			}
+			p.adjustInterval()
 			created := 0
 			for len(p.idChan) < p.capacity {
 				conn, err := p.dialer()
@@ -227,6 +239,10 @@ func (p *Pool) ServerManager() {
 				conn = tlsConn
 			}
 			id := p.getID()
+			if _, exist := p.conns.Load(id); exist {
+				conn.Close()
+				continue
+			}
 			_, err = conn.Write([]byte(id))
 			if err != nil {
 				conn.Close()
