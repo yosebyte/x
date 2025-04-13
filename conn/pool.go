@@ -378,10 +378,16 @@ func (p *Pool) removeID(id string) {
 func (p *Pool) adjustInterval() {
 	idle := len(p.idChan)
 	if idle < p.capacity*2/10 && p.interval > p.minIvl {
-		p.interval -= time.Second
+		p.interval -= 100 * time.Millisecond
+		if p.interval < p.minIvl {
+			p.interval = p.minIvl
+		}
 	}
 	if idle > p.capacity*8/10 && p.interval < p.maxIvl {
-		p.interval += time.Second
+		p.interval += 100 * time.Millisecond
+		if p.interval > p.maxIvl {
+			p.interval = p.maxIvl
+		}
 	}
 }
 
