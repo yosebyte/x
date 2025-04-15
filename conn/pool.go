@@ -174,6 +174,7 @@ func (p *Pool) ClientManager() {
 				case "1":
 					tlsConn := tls.Client(conn, &tls.Config{
 						InsecureSkipVerify: true,
+						MinVersion:         tls.VersionTLS13,
 					})
 					err := tlsConn.Handshake()
 					if err != nil {
@@ -184,6 +185,7 @@ func (p *Pool) ClientManager() {
 				case "2":
 					tlsConn := tls.Client(conn, &tls.Config{
 						InsecureSkipVerify: false,
+						MinVersion:         tls.VersionTLS13,
 						ServerName:         p.hostname,
 					})
 					err := tlsConn.Handshake()
