@@ -124,7 +124,6 @@ if err != nil {
 
 // Create a server pool with TLS support
 serverPool := conn.NewServerPool(
-    100,                // max 100 connections
     tlsConfig,          // TLS configuration (can be nil for non-TLS)
     listener,           // network listener
 )

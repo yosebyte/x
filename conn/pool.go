@@ -95,10 +95,8 @@ func NewClientPool(minCap, maxCap int, minIvl, maxIvl time.Duration, tlsCode str
 	}
 }
 
-func NewServerPool(maxCap int, tlsConfig *tls.Config, listener net.Listener) *Pool {
-	if maxCap <= 0 {
-		maxCap = 1
-	}
+func NewServerPool(tlsConfig *tls.Config, listener net.Listener) *Pool {
+	maxCap := 65536
 	if listener == nil {
 		return nil
 	}
@@ -107,6 +105,7 @@ func NewServerPool(maxCap int, tlsConfig *tls.Config, listener net.Listener) *Po
 		idChan:    make(chan string, maxCap),
 		tlsConfig: tlsConfig,
 		listener:  listener,
+		maxCap:    maxCap,
 	}
 }
 
