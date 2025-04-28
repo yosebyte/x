@@ -19,6 +19,7 @@ type Pool struct {
 	tlsConfig *tls.Config
 	dialer    func() (net.Conn, error)
 	listener  net.Listener
+	errCount  int
 	capacity  int
 	minCap    int
 	maxCap    int
@@ -160,6 +161,10 @@ func (p *Pool) ClientManager() {
 		default:
 			if !mu.TryLock() {
 				continue
+			}
+			if p.errCount >= p.Active()/2 {
+				p.Flush()
+				p.errCount = 0
 			}
 			p.adjustInterval()
 			created := 0
