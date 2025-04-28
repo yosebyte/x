@@ -354,6 +354,12 @@ func (p *Pool) Interval() time.Duration {
 	return p.interval
 }
 
+func (p *Pool) AddError() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.errCount++
+}
+
 func (p *Pool) getID() string {
 	bytes := make([]byte, 4)
 	rand.Read(bytes)
